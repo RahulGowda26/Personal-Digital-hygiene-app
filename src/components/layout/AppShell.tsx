@@ -24,11 +24,9 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { id: 'home', label: 'Home', icon: Home },
-  { id: 'checkup', label: 'Scan', icon: Stethoscope },
   { id: 'issues', label: 'Problems', icon: AlertTriangle },
   { id: 'tools', label: 'Tools', icon: Wrench },
   { id: 'vault', label: 'Vault', icon: Lock },
-  { id: 'learn', label: 'Learn', icon: GraduationCap },
 ];
 
 interface AppShellProps {
@@ -126,22 +124,20 @@ export function AppShell({ activeTab, onTabChange, children }: AppShellProps) {
       </main>
 
       {/* Mobile bottom navigation */}
-      <nav className="md:hidden fixed bottom-6 inset-x-6 z-30 bg-white/90 backdrop-blur-md rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-slate-100">
-        <div className="flex items-center justify-around px-2 py-2">
+      <nav className="md:hidden fixed bottom-6 inset-x-4 z-30 bg-white/90 backdrop-blur-md rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-slate-100/50 overflow-hidden">
+        <div className="flex items-center gap-1 overflow-x-auto px-2 py-2 scrollbar-hide" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
+          <style>{`
+            .scrollbar-hide::-webkit-scrollbar { display: none; }
+          `}</style>
           {navItems.map((item) => (
-            <MobileNavItem
-              key={item.id}
-              item={item}
-              active={activeTab === item.id}
-              onClick={() => onTabChange(item.id)}
-            />
+            <div key={item.id} className="flex-shrink-0 snap-center">
+              <MobileNavItem
+                item={item}
+                active={activeTab === item.id}
+                onClick={() => onTabChange(item.id)}
+              />
+            </div>
           ))}
-          {/* Add Settings directly to bottom nav for mobile to match the 4-icon layout */}
-          <MobileNavItem
-            item={{ id: 'settings', label: 'Settings', icon: Settings }}
-            active={activeTab === 'settings'}
-            onClick={() => onTabChange('settings')}
-          />
         </div>
       </nav>
 

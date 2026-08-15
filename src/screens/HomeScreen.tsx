@@ -183,33 +183,70 @@ export function HomeScreen({
               
               <div className="bg-white rounded-[24px] md:rounded-[32px] p-6 md:p-8 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] flex flex-col justify-between flex-1 min-h-[160px]">
                 <div>
-                  <h3 className="text-lg md:text-xl font-black leading-tight text-slate-900 mb-2">Check Device</h3>
-                  <p className="text-xs md:text-sm font-medium text-slate-500 leading-snug">Scan for new risks and vulnerabilities</p>
+                  <div className="flex items-center gap-3 mb-2">
+                    <Smartphone size={20} className="text-slate-900" />
+                    <h3 className="text-lg md:text-xl font-black leading-tight text-slate-900">Scan Device</h3>
+                  </div>
+                  <p className="text-xs md:text-sm font-medium text-slate-500 leading-snug mt-2">Run an automated sweep of your device, network, and apps for risks.</p>
                 </div>
                 <button 
                   onClick={onRunCheckup}
-                  className="mt-6 w-full bg-[#1c1c1e] text-white rounded-full py-3.5 md:py-4 text-sm font-bold tracking-wide hover:bg-black transition-colors"
+                  className="mt-6 w-full bg-[#1c1c1e] text-white rounded-full py-3.5 md:py-4 text-sm font-bold tracking-wide hover:bg-black transition-colors flex items-center justify-center gap-2"
                 >
-                  Start
+                  Start Scan
                 </button>
               </div>
 
               <div className="bg-white rounded-[24px] md:rounded-[32px] p-6 md:p-8 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] flex flex-col justify-between flex-1 min-h-[160px]">
                 <div>
-                  <h3 className="text-lg md:text-xl font-black leading-tight text-slate-900 mb-2">Fix Risks</h3>
-                  <p className="text-xs md:text-sm font-medium text-slate-500 leading-snug">Resolve open security issues</p>
+                  <div className="flex items-center gap-3 mb-2">
+                    <ShieldCheck size={20} className="text-[#ff6b52]" />
+                    <h3 className="text-lg md:text-xl font-black leading-tight text-slate-900">Security Habits</h3>
+                  </div>
+                  <p className="text-xs md:text-sm font-medium text-slate-500 leading-snug mt-2">Answer a quick questionnaire to assess your human security vulnerabilities.</p>
                 </div>
                 <button 
-                  onClick={onViewIssues}
-                  className="mt-6 w-full bg-[#1c1c1e] text-white rounded-full py-3.5 md:py-4 text-sm font-bold tracking-wide hover:bg-black transition-colors"
+                  onClick={onRunHabitsCheckup}
+                  className="mt-6 w-full bg-[#ff6b52] text-white rounded-full py-3.5 md:py-4 text-sm font-bold tracking-wide hover:bg-[#e85c45] transition-colors flex items-center justify-center gap-2"
                 >
-                  Resolve
+                  Answer Questions
                 </button>
               </div>
 
             </div>
           </div>
 
+        </div>
+
+        {/* Educational Info Row */}
+        <div className="mt-6 md:mt-8 grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+          <div className="bg-slate-900 rounded-[24px] p-6 md:p-8 text-white relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-6 opacity-10">
+              <AppWindow size={80} />
+            </div>
+            <h3 className="text-lg font-bold mb-3 relative z-10">Why Device Hygiene Matters</h3>
+            <p className="text-sm text-slate-300 leading-relaxed relative z-10">
+              Even with strong passwords, outdated software or rogue permissions can give attackers a backdoor into your digital life. Regular automated scanning prevents silent compromises.
+            </p>
+          </div>
+          <div className="bg-white border border-slate-100 rounded-[24px] p-6 md:p-8 shadow-sm">
+            <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 mb-4">
+              <EyeOff size={20} />
+            </div>
+            <h3 className="text-lg font-bold mb-3 text-slate-900">The Human Element</h3>
+            <p className="text-sm text-slate-500 leading-relaxed">
+              Cybersecurity isn't just about software; it's about habits. Clicking unknown links, reusing passwords, and over-sharing online are the leading causes of modern identity theft.
+            </p>
+          </div>
+          <div className="bg-white border border-slate-100 rounded-[24px] p-6 md:p-8 shadow-sm">
+            <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500 mb-4">
+              <Globe size={20} />
+            </div>
+            <h3 className="text-lg font-bold mb-3 text-slate-900">Network Safety</h3>
+            <p className="text-sm text-slate-500 leading-relaxed">
+              Connecting to public Wi-Fi without proper encryption exposes your traffic. Always ensure you are on a trusted network or use a reputable VPN when traveling.
+            </p>
+          </div>
         </div>
 
       </div>

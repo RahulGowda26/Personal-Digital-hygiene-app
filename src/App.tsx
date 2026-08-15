@@ -45,7 +45,7 @@ function Root() {
     <AppShell activeTab={tab} onTabChange={setTab}>
       {tab === 'home' && (
         <HomeScreen
-          onRunCheckup={() => setTab('habits')}
+          onRunCheckup={() => { setCheckupMode('all'); setTab('checkup'); }}
           onScanNetwork={() => { setCheckupMode('network'); setTab('checkup'); }}
           onRunHabitsCheckup={() => setTab('habits')}
           onFixNow={() => setTab('issues')}
