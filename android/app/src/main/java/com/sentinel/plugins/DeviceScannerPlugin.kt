@@ -17,6 +17,8 @@ class DeviceScannerPlugin : Plugin() {
 
     @PluginMethod
     fun getDeviceSignals(call: PluginCall) {
+        val sessionId = call.getString("sessionId") ?: "unknown"
+        android.util.Log.d("SentinelDeviceScanner", "START id=$sessionId")
         try {
             val context: Context = this.context
             
@@ -78,8 +80,11 @@ class DeviceScannerPlugin : Plugin() {
             ret.put("isRooted", isRooted)
             ret.put("isEncrypted", isEncrypted)
 
+            android.util.Log.d("SentinelDeviceScanner", "SUCCESS id=$sessionId")
             call.resolve(ret)
         } catch (e: Exception) {
+            val sessionId = call.getString("sessionId") ?: "unknown"
+            android.util.Log.d("SentinelDeviceScanner", "CANNOT_BE_SCANNED reason=" + e.message + " id=" + sessionId)
             call.reject("Failed to gather device signals", e)
         }
     }

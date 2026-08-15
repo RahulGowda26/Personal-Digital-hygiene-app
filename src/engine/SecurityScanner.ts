@@ -8,7 +8,11 @@ import type {
   ScanFinding
 } from '@/types';
 import { SentinelDeviceScanner } from '@/platform/capacitor/DeviceScannerBridge';
+import { SentinelNetworkScanner } from '@/platform/capacitor/NetworkScannerBridge';
 import { getInstalledAppsNative } from '@/platform/capacitor/AppScannerBridge';
+import { DeterministicRuleEngine } from './DeterministicRuleEngine';
+import { AIAnalyzer } from './AIAnalyzer';
+import { analyzeApps } from './appRiskAnalyzer';
 
 /**
  * SecurityScanner - The central scan orchestrator.
@@ -16,110 +20,157 @@ import { getInstalledAppsNative } from '@/platform/capacitor/AppScannerBridge';
  * Executes native scanners individually and aggregates their results into a 
  * normalized ScanResult, ensuring that failures in one module do not crash others.
  */
+export type ScanPhase = 
+  | 'INITIALIZING' 
+  | 'DEVICE_SECURITY' 
+  | 'INSTALLED_APPLICATIONS' 
+  | 'NETWORK_SECURITY'
+  | 'CHECKING_PERMISSIONS'
+  | 'FINDING_RISKS'
+  | 'CREATING_REPORT'
+  | 'COMPLETE';
+
 export class SecurityScanner {
   private isNative(): boolean {
-    return Capacitor.isNativePlatform();
+    if (Capacitor.isNativePlatform()) return true;
+    if (typeof window !== 'undefined' && (window as any).electronAPI) return true;
+    return false;
+  }
+
+  private generateScanId(): string {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   }
 
   /**
    * Orchestrates the complete device scan workflow.
    */
-  public async scan(): Promise<ScanResult> {
+  public async scan(
+    onProgress?: (phase: ScanPhase) => void,
+    onLog?: (msg: string) => void
+  ): Promise<ScanResult> {
+    const scanId = this.generateScanId();
     const deviceId = 'local-device';
     const timestamp = new Date().toISOString();
 
-    if (!this.isNative()) {
-      return this.createMockFallback(deviceId, timestamp);
+    console.log(`[SCAN SERVICE ENTERED]`);
+    console.log(`[SCAN START] id=${scanId}`);
+    if (onLog) onLog(`[INIT] Scan orchestrator started (id: ${scanId})`);
+    if (onProgress) {
+      onProgress('INITIALIZING');
     }
 
-    let deviceIntegrity = await this.getDeviceIntegrity();
-    let configuration = await this.getSecurityConfiguration();
-    let appsData = await this.getInstalledAppsAndPermissions();
+    if (!this.isNative()) {
+      return {
+        deviceId,
+        timestamp,
+        status: 'failed',
+        deviceIntegrity: { status: 'not_available', confidence: 'low', checksPerformed: [], issues: [] },
+        configuration: { status: 'not_available', developerModeEnabled: false, unknownSourcesEnabled: false, screenLockSecured: false, storageEncrypted: false, issues: [] },
+        apps: [],
+        permissions: {},
+        findings: []
+      };
+    }
 
+    console.log(`[NATIVE DEVICE CALL]`);
+    if (onLog) onLog(`[NATIVE] Requesting device integrity signals...`);
+    if (onProgress) {
+      onProgress('DEVICE_SECURITY');
+    }
+    let deviceIntegrity = await this.getDeviceIntegrity(scanId);
+    if (onLog) onLog(`[OK] Device status: ${deviceIntegrity.status}`);
+    
+    if (onLog) onLog(`[NATIVE] Requesting security configurations...`);
+    let configuration = await this.getSecurityConfiguration(scanId);
+    
+    console.log(`[NATIVE APP CALL]`);
+    if (onLog) onLog(`[NATIVE] Querying installed applications via PackageManager...`);
+    if (onProgress) {
+      onProgress('INSTALLED_APPLICATIONS');
+    }
+    let appsData = await this.getInstalledAppsAndPermissions(scanId);
+    if (onLog) onLog(`[OK] Retrieved ${appsData.apps?.length || 0} applications.`);
+
+    if (onLog) onLog(`[NETWORK] Scanning active connections...`);
+    if (onProgress) {
+      onProgress('NETWORK_SECURITY');
+    }
+    let networkData = await this.getNetworkSignals(scanId);
+    if (onLog) onLog(`[OK] Network scan completed.`);
+
+    console.log(`[RISK ENGINE START] id=${scanId}`);
+    if (onProgress) {
+      onProgress('CHECKING_PERMISSIONS');
+    }
     const findings: ScanFinding[] = [];
 
-    // Analyze Integrity
-    if (deviceIntegrity.status === 'error') {
-      // Failed to scan
-    } else {
-      if (deviceIntegrity.issues.includes('Root indicators found')) {
-        findings.push({
-          id: 'root-detected',
-          title: 'Device Root or Jailbreak Detected',
-          description: 'The device exhibits indicators of being rooted, compromising the OS sandbox.',
-          severity: 'critical',
-          source: 'ANDROID_API',
-          evidence: ['Root indicators found'],
-          recommendedPlaybook: 'unroot-device'
-        });
-      }
-      if (deviceIntegrity.issues.includes('Developer mode active')) {
-        findings.push({
-          id: 'dev-mode-active',
-          title: 'Developer Mode is Active',
-          description: 'Developer options are enabled, which can be used to bypass security controls over USB.',
-          severity: 'medium',
-          source: 'ANDROID_API',
-          evidence: ['Developer mode active'],
-          recommendedPlaybook: 'disable-dev-mode'
-        });
-      }
-    }
+    if (onLog) onLog(`[ENGINE] Initializing Deterministic Rule Engine...`);
+    const ruleEngine = new DeterministicRuleEngine();
+    const aiAnalyzer = new AIAnalyzer();
 
-    // Analyze Configuration
-    if (configuration.status !== 'error') {
-      if (!configuration.screenLockSecured) {
-        findings.push({
-          id: 'no-screen-lock',
-          title: 'No Secure Screen Lock',
-          description: 'The device does not have a PIN, password, or biometric lock enabled.',
-          severity: 'high',
-          source: 'ANDROID_API',
-          evidence: ['No secure lock screen'],
-          recommendedPlaybook: 'enable-screen-lock'
-        });
-      }
-      if (!configuration.storageEncrypted) {
-        findings.push({
-          id: 'storage-unencrypted',
-          title: 'Device Storage is Unencrypted',
-          description: 'Data on this device can be extracted if it falls into the wrong hands.',
-          severity: 'high',
-          source: 'ANDROID_API',
-          evidence: ['Storage encryption inactive'],
-          recommendedPlaybook: 'enable-encryption'
-        });
+    if (onLog) onLog(`[EVAL] Analyzing device integrity evidence...`);
+    const deviceEvidence = ruleEngine.evaluateDeviceIntegrity(deviceIntegrity, configuration, networkData);
+    
+    // Convert AI Analysis of device to finding
+    if (onLog) onLog(`[AI] Evaluating signals with heuristics...`);
+    const deviceDecisions = await aiAnalyzer.analyzeEvidence(deviceEvidence);
+    
+    for (const deviceDecision of deviceDecisions) {
+      if (deviceDecision.status === 'CRITICAL_RISK' || deviceDecision.status === 'HIGH_RISK' || deviceDecision.status === 'MEDIUM_RISK') {
+         findings.push({
+           id: `ai-device-${scanId}-${findings.length}`,
+           category: 'device_security',
+           title: `Device Security: ${deviceDecision.status.replace('_', ' ')}`,
+           description: deviceDecision.reason,
+           severity: deviceDecision.status === 'CRITICAL_RISK' ? 'critical' : (deviceDecision.status === 'HIGH_RISK' ? 'high' : 'medium'),
+           source: 'ANDROID_API',
+           evidence: deviceDecision.evidence,
+           recommendedPlaybook: deviceDecision.recommendedAction ? 'generic-remediation' : null
+         });
       }
     }
 
     // Analyze Apps and Permissions
+    if (onProgress) {
+      onProgress('FINDING_RISKS');
+    }
+
     if (appsData.status !== 'error') {
-      for (const app of appsData.apps) {
-        // Mock permission analysis based on extracted permissions
-        const perms = appsData.permissions[app.packageName] || [];
-        for (const p of perms) {
-          if (p.isGranted && ['android.permission.RECORD_AUDIO', 'android.permission.CAMERA'].includes(p.permission)) {
-             // In a real analyzer, we might cross-reference this with a threat intel list or 
-             // unknown source. For now we just flag unknown source + sensitive permission.
-             if (app.installSource !== 'com.android.vending') {
-                findings.push({
-                  id: `app-${app.packageName}-sensitive-perm`,
-                  title: 'Unknown Application Has Sensitive Access',
-                  description: `${app.appName} was installed from outside the Play Store and has sensitive permissions.`,
-                  severity: 'high',
-                  source: 'ANDROID_API',
-                  evidence: [
-                    `Observed: ${p.permission.replace('android.permission.', '')} permission granted`,
-                    `App: ${app.appName} (${app.packageName})`,
-                    `Source: ${app.installSource || 'Unknown'}`
-                  ],
-                  recommendedPlaybook: 'review-app-permissions'
-                });
-             }
-          }
-        }
+      if (onLog) onLog(`[EVAL] Executing app risk analyzer against ${appsData.apps.length} apps...`);
+      
+      const appFindings = analyzeApps(appsData.apps);
+      for (const f of appFindings) {
+        if (onLog) onLog(`[WARN] Finding generated: ${f.title}`);
+        findings.push({
+          id: `app-${f.packageName}-${scanId}`,
+          category: 'app_security',
+          title: f.title || f.appName || f.packageName,
+          description: f.description || f.reason || 'App Security Risk',
+          severity: f.severity,
+          source: 'android_native_scan',
+          evidence: f.evidence,
+          recommendedPlaybook: f.recommendedPlaybook || 'review_app_permissions'
+        });
       }
     }
+
+    console.log(`[FINDINGS GENERATED]`);
+    console.log(`[RISK ENGINE FINDINGS COUNT=${findings.length}] id=${scanId}`);
+    console.log(`[FINAL FINDINGS COUNT=${findings.length}] id=${scanId}`);
+
+    if (onProgress) {
+      onProgress('CREATING_REPORT');
+    }
+
+    for (const f of findings) {
+      console.log(`[FINDING DEBUG]\nApp=${f.title}\nPackage=${f.id.split('-')[1] || 'N/A'}\nRule=${f.description}\nSeverity=${f.severity}\nEvidence=${f.evidence?.join('; ')}\nSource=${f.source}`);
+    }
+
+    console.log(`[SCAN COMPLETE] id=${scanId}`);
+    if (onProgress) onProgress('COMPLETE');
 
     return {
       deviceId,
@@ -129,13 +180,108 @@ export class SecurityScanner {
       configuration,
       apps: appsData.apps,
       permissions: appsData.permissions,
-      findings
+      findings,
+      networkDetails: {
+        ssid: networkData.ssid,
+        ipAddress: networkData.ipAddress,
+        deviceCount: networkData.deviceCount,
+        connectedDevices: networkData.connectedDevices
+      }
     };
   }
 
-  public async getDeviceIntegrity(): Promise<DeviceIntegrityResult> {
+  /**
+   * Orchestrates ONLY the network scan workflow.
+   */
+  public async scanNetworkOnly(
+    onProgress?: (phase: ScanPhase) => void,
+    onLog?: (msg: string) => void
+  ): Promise<ScanResult> {
+    const scanId = this.generateScanId();
+    const deviceId = 'local-device';
+    const timestamp = new Date().toISOString();
+
+    console.log(`[NETWORK SCAN ENTERED] id=${scanId}`);
+    if (onLog) onLog(`[INIT] Network-only scan started (id: ${scanId})`);
+    if (onProgress) onProgress('INITIALIZING');
+
+    if (!this.isNative()) {
+      if (onProgress) onProgress('COMPLETE');
+      return {
+        deviceId,
+        timestamp,
+        status: 'failed',
+        deviceIntegrity: { status: 'not_available', confidence: 'low', checksPerformed: [], issues: [] },
+        configuration: { status: 'not_available', developerModeEnabled: false, unknownSourcesEnabled: false, screenLockSecured: false, storageEncrypted: false, issues: [] },
+        apps: [],
+        permissions: {},
+        findings: []
+      };
+    }
+
+    if (onLog) onLog(`[NETWORK] Scanning active connections (this may take a few seconds)...`);
+    if (onProgress) onProgress('NETWORK_SECURITY');
+    let networkData = await this.getNetworkSignals(scanId);
+    if (onLog) {
+      onLog(`[OK] Network scan completed.`);
+      if (networkData.ssid) onLog(`[INFO] Network Name (SSID): ${networkData.ssid}`);
+      if (networkData.ipAddress) onLog(`[INFO] Device IP: ${networkData.ipAddress}`);
+      if (networkData.deviceCount !== undefined) onLog(`[INFO] Connected Devices Found: ${networkData.deviceCount}`);
+    }
+
+    if (onProgress) onProgress('FINDING_RISKS');
+    const findings: ScanFinding[] = [];
+
+    const ruleEngine = new DeterministicRuleEngine();
+    const aiAnalyzer = new AIAnalyzer();
+
+    const deviceEvidence = ruleEngine.evaluateDeviceIntegrity(
+      { status: 'safe', confidence: 'high', checksPerformed: [], issues: [] }, 
+      { status: 'safe', developerModeEnabled: false, unknownSourcesEnabled: false, screenLockSecured: true, storageEncrypted: true, issues: [] }, 
+      networkData
+    );
+    
+    const deviceDecisions = await aiAnalyzer.analyzeEvidence(deviceEvidence);
+    
+    for (const deviceDecision of deviceDecisions) {
+      if (deviceDecision.status === 'CRITICAL_RISK' || deviceDecision.status === 'HIGH_RISK' || deviceDecision.status === 'MEDIUM_RISK') {
+         findings.push({
+           id: `ai-network-${scanId}-${findings.length}`,
+           category: 'network_security',
+           title: `Network Security: ${deviceDecision.status.replace('_', ' ')}`,
+           description: deviceDecision.reason,
+           severity: deviceDecision.status === 'CRITICAL_RISK' ? 'critical' : (deviceDecision.status === 'HIGH_RISK' ? 'high' : 'medium'),
+           source: 'ANDROID_API',
+           evidence: deviceDecision.evidence,
+           recommendedPlaybook: deviceDecision.recommendedAction ? 'generic-remediation' : null
+         });
+      }
+    }
+
+    if (onLog) onLog(`[OK] Network scan completed successfully. Found ${findings.length} findings.`);
+    if (onProgress) onProgress('COMPLETE');
+
+    return {
+      deviceId,
+      timestamp,
+      status: 'success',
+      deviceIntegrity: { status: 'safe', confidence: 'high', checksPerformed: [], issues: [] },
+      configuration: { status: 'safe', developerModeEnabled: false, unknownSourcesEnabled: false, screenLockSecured: true, storageEncrypted: true, issues: [] },
+      apps: [],
+      permissions: {},
+      findings,
+      networkDetails: {
+        ssid: networkData.ssid,
+        ipAddress: networkData.ipAddress,
+        deviceCount: networkData.deviceCount,
+        connectedDevices: networkData.connectedDevices
+      }
+    };
+  }
+
+  public async getDeviceIntegrity(sessionId: string): Promise<DeviceIntegrityResult> {
     try {
-      const signals = await SentinelDeviceScanner.getDeviceSignals();
+      const signals = await SentinelDeviceScanner.getDeviceSignals({ sessionId });
       const issues: string[] = [];
       let status: DeviceIntegrityResult['status'] = 'safe';
 
@@ -156,18 +302,13 @@ export class SecurityScanner {
       };
     } catch (e) {
       console.error('DeviceIntegrity scan failed', e);
-      return {
-        status: 'error',
-        confidence: 'low',
-        checksPerformed: [],
-        issues: ['Scan failed or unavailable']
-      };
+      return { status: 'not_available', confidence: 'low', checksPerformed: [], issues: [] };
     }
   }
 
-  public async getSecurityConfiguration(): Promise<SecurityConfigurationResult> {
+  public async getSecurityConfiguration(sessionId: string): Promise<SecurityConfigurationResult> {
     try {
-      const signals = await SentinelDeviceScanner.getDeviceSignals();
+      const signals = await SentinelDeviceScanner.getDeviceSignals({ sessionId });
       const issues: string[] = [];
       let status: SecurityConfigurationResult['status'] = 'safe';
 
@@ -190,24 +331,25 @@ export class SecurityScanner {
       };
     } catch (e) {
       console.error('SecurityConfiguration scan failed', e);
-      return {
-        status: 'error',
-        developerModeEnabled: false,
-        unknownSourcesEnabled: false,
-        screenLockSecured: false,
-        storageEncrypted: false,
-        issues: ['Scan failed or unavailable']
-      };
+      return { status: 'not_available', developerModeEnabled: false, unknownSourcesEnabled: false, screenLockSecured: false, storageEncrypted: false, issues: [] };
     }
   }
 
-  public async getInstalledAppsAndPermissions(): Promise<{
+  public async getInstalledAppsAndPermissions(sessionId: string): Promise<{
     status: 'success' | 'error';
     apps: InstalledAppInfo[];
     permissions: { [packageName: string]: PermissionFinding[] };
   }> {
     try {
-      const nativeResult = await getInstalledAppsNative();
+      const isElectron = typeof window !== 'undefined' && !!(window as any).electronAPI;
+      let nativeResult = { apps: [] as any[] };
+      
+      if (isElectron && typeof (window as any).electronAPI.scanApps === 'function') {
+        nativeResult.apps = await (window as any).electronAPI.scanApps();
+      } else {
+        nativeResult = await getInstalledAppsNative(sessionId);
+      }
+      
       const apps: InstalledAppInfo[] = [];
       const permissions: { [packageName: string]: PermissionFinding[] } = {};
 
@@ -218,6 +360,8 @@ export class SecurityScanner {
           versionName: app.versionName,
           versionCode: app.versionCode || 0,
           isSystemApp: app.isSystemApp,
+          isVendorApp: app.isVendorApp,
+          isUserApp: app.isUserApp,
           isEnabled: true,
           requestedPermissions: app.requestedPermissions || [],
           targetSdkVersion: app.targetSdkVersion,
@@ -240,46 +384,52 @@ export class SecurityScanner {
       };
     } catch (e) {
       console.error('InstalledApps scan failed', e);
-      return {
-        status: 'error',
-        apps: [],
-        permissions: {}
-      };
+      return { status: 'error', apps: [], permissions: {} };
     }
   }
 
-  private createMockFallback(deviceId: string, timestamp: string): ScanResult {
-    return {
-      deviceId,
-      timestamp,
-      status: 'success',
-      deviceIntegrity: {
-        status: 'safe',
-        confidence: 'high',
-        checksPerformed: ['Mock root check'],
-        issues: []
-      },
-      configuration: {
-        status: 'safe',
-        developerModeEnabled: false,
-        unknownSourcesEnabled: false,
-        screenLockSecured: true,
-        storageEncrypted: true,
-        issues: []
-      },
-      apps: [],
-      permissions: {},
-      findings: [
-        {
-          id: 'mock-finding',
-          title: 'Running in Browser / Demo Mode',
-          description: 'Cannot perform native scans in a web browser.',
-          severity: 'info',
-          source: 'NOT_AVAILABLE',
-          evidence: ['No native capabilities accessible'],
-          recommendedPlaybook: null
+
+  public async getNetworkSignals(sessionId: string): Promise<any> {
+    try {
+      if (this.isNative()) {
+        try {
+          await SentinelNetworkScanner.requestPermissions();
+        } catch (permErr) {
+          console.warn('Network permission request failed', permErr);
         }
-      ]
-    };
+      }
+      const signals = await SentinelNetworkScanner.getNetworkSignals({ sessionId });
+      
+      const issues: string[] = [];
+      let status: 'safe' | 'medium' | 'high' | 'critical' = 'safe';
+
+      if (signals.isProxySet) {
+        issues.push('Traffic is routed through a proxy');
+        status = 'high';
+      }
+      
+      if (signals.isVpnActive) {
+        issues.push('VPN connection active');
+        if (status === 'safe') status = 'medium';
+      }
+
+      return { 
+        status, 
+        isVpnActive: signals.isVpnActive,
+        isProxySet: signals.isProxySet,
+        isMetered: signals.isMetered,
+        isOpenNetwork: signals.isOpenNetwork,
+        isCaptivePortal: signals.isCaptivePortal,
+        ssid: signals.ssid,
+        ipAddress: signals.ipAddress,
+        deviceCount: signals.deviceCount,
+        connectedDevices: signals.connectedDevices,
+        issues 
+      };
+    } catch (e) {
+      console.error('Network scan failed', e);
+      return { status: 'not_available', details: 'Error', issues: [] };
+    }
   }
+
 }

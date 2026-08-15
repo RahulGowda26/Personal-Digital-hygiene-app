@@ -57,13 +57,14 @@ export interface AppMetadata {
   requestedPermissions: string[];
   grantedPermissions: string[];
   isSystemApp: boolean;
+  isVendorApp: boolean;
+  isUserApp: boolean;
 }
 
 /** Tracks where security data actually came from. */
 export type ScanSource = 
   | 'ANDROID_PACKAGE_MANAGER'
   | 'IOS_APP_QUERY'
-  | 'DEMO_MOCK'
   | 'UNSUPPORTED'
   | 'SCAN_ERROR'
   | 'REAL_DEVICE_DATA'
@@ -71,8 +72,32 @@ export type ScanSource =
   | 'USER_INPUT'
   | 'NOT_AVAILABLE';
 
+export type ScanStatus = 
+  | 'SCANNED' 
+  | 'NOT_AVAILABLE' 
+  | 'PERMISSION_REQUIRED' 
+  | 'RESTRICTED_BY_ANDROID' 
+  | 'FAILED';
+
+export interface SecurityDecision {
+  status: 'SAFE' | 'LOW_RISK' | 'MEDIUM_RISK' | 'HIGH_RISK' | 'CRITICAL_RISK' | 'INSUFFICIENT_EVIDENCE' | 'CANNOT_ASSESS';
+  confidence: number; // 0-100
+  evidence: string[];
+  reason: string;
+  recommendedAction?: string;
+  limitations?: string[];
+}
+
+export interface NormalizedEvidence {
+  appInfo?: AppMetadata;
+  deviceSignals?: Partial<DeviceSecuritySignals>;
+  networkSignals?: Partial<NetworkSecuritySignals>;
+  rawFlags: string[];
+}
+
 export interface ScanFinding {
   id: string;
+  category: SecurityCategory;
   title: string;
   description: string;
   severity: Severity;
@@ -87,6 +112,8 @@ export interface InstalledAppInfo {
   versionName: string;
   versionCode: number;
   isSystemApp: boolean;
+  isVendorApp: boolean;
+  isUserApp: boolean;
   isEnabled: boolean;
   requestedPermissions: string[];
   targetSdkVersion: number;
@@ -124,13 +151,25 @@ export interface ScanResult {
   permissions: { [packageName: string]: PermissionFinding[] };
   configuration: SecurityConfigurationResult;
   findings: ScanFinding[];
+  networkDetails?: {
+    ssid?: string;
+    ipAddress?: string;
+    deviceCount?: number;
+    connectedDevices?: string[];
+  };
 }
 
 /** Result of an installed-app scan with provenance metadata. */
 export interface AppScanResult {
   apps: AppMetadata[];
   source: ScanSource;
-  /** Number of apps the OS reported vs. how many we could inspect. */
+  totalPackagesDetected: number;
+  userInstalledApps: number;
+  systemApps: number;
+  vendorApps: number;
+  analyzedApps: number;
+  skippedApps: number;
+  skipReasons: string[];
   totalPackagesReported?: number;
   /** Percentage of packages we could fully inspect (0-100). */
   coveragePercent: number;

@@ -20,6 +20,7 @@ import type {
 } from '@/types';
 import {
   questionsByCategory,
+  checkupQuestions,
 } from '@/data/checkupQuestions';
 import { useAuth } from '@/auth/AuthContext';
 import {
@@ -31,6 +32,7 @@ import {
 import { ScoreRing } from '@/components/ui/ScoreRing';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { AppInventoryModal } from '@/components/ui/AppInventoryModal';
 
 import { userFacingError } from '@/lib/errors';
 import { getSecurityAdapter } from '@/platform/SecurityAdapter';
@@ -55,6 +57,7 @@ interface SecurityHabitsScreenProps {
 }
 
 export function SecurityHabitsScreen({
+  onComplete,
   onViewIssues,
   onBackHome,
 }: SecurityHabitsScreenProps) {
@@ -68,7 +71,25 @@ export function SecurityHabitsScreen({
   // Manual Questions State
   const [questionIndex, setQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, CheckupAnswer>>({});
-  const privacyQuestions = useMemo(() => questionsByCategory('privacy'), []);
+  
+  const adapter = useMemo(() => getSecurityAdapter(), []);
+  
+  // Status flags for capabilities
+  const isAppSupported = useMemo(() => adapter.getCapabilities().find(c => c.capability === 'app_security')?.status === 'supported', [adapter]);
+  const isDeviceSupported = useMemo(() => adapter.getCapabilities().find(c => c.capability === 'device_security')?.status === 'supported', [adapter]);
+  const isNetworkSupported = useMemo(() => adapter.getCapabilities().find(c => c.capability === 'network_security')?.status === 'supported', [adapter]);
+
+  const activeQuestions = useMemo(() => {
+    return checkupQuestions.filter((q) => {
+      if (q.category === 'account_security') return true;
+      if (q.category === 'password_hygiene') return true;
+      if (q.category === 'privacy') return true;
+      if (q.category === 'app_security') return !isAppSupported;
+      if (q.category === 'device_security') return !isDeviceSupported;
+      if (q.category === 'network_security') return !isNetworkSupported;
+      return true;
+    });
+  }, [isAppSupported, isDeviceSupported, isNetworkSupported]);
 
   // Automated Scans Results
   const [breachResult, setBreachResult] = useState<BreachCheckResult | null>(null);
@@ -89,15 +110,12 @@ export function SecurityHabitsScreen({
     grade: string;
     findingsCount: number;
     isPreliminary: boolean;
+    apps?: any[];
+    permissions?: any;
+    findings?: any[];
   } | null>(null);
-
-  const adapter = useMemo(() => getSecurityAdapter(), []);
   
-  // Status flags for capabilities
-  const isAppSupported = useMemo(() => adapter.getCapabilities().find(c => c.capability === 'app_security')?.status === 'supported', [adapter]);
-  const isDeviceSupported = useMemo(() => adapter.getCapabilities().find(c => c.capability === 'device_security')?.status === 'supported', [adapter]);
-  const isNetworkSupported = useMemo(() => adapter.getCapabilities().find(c => c.capability === 'network_security')?.status === 'supported', [adapter]);
-
+  const [showAppInventory, setShowAppInventory] = useState(false);
   // Phase Execution Hooks
   
   const startCheckup = useCallback(async () => {
@@ -108,7 +126,7 @@ export function SecurityHabitsScreen({
       const device = await ensureDevice(user.id, 'web');
       const checkup = await createCheckup(user.id, device.id);
       setCheckupId(checkup.id);
-      if (privacyQuestions.length > 0) {
+      if (activeQuestions.length > 0) {
         setPhase('questions');
       } else {
         setPhase('scan_account');
@@ -117,19 +135,20 @@ export function SecurityHabitsScreen({
       setError(userFacingError(err, 'Could not start the checkup.'));
       setPhase('intro');
     }
-  }, [user, privacyQuestions.length]);
+  }, [user, activeQuestions.length]);
 
   const answerQuestion = (questionId: string, value: string) => {
+    const currentQuestion = activeQuestions[questionIndex];
     setAnswers(prev => ({
       ...prev,
       [questionId]: {
         questionId,
-        category: 'privacy',
+        category: currentQuestion.category,
         value
       }
     }));
     
-    if (questionIndex < privacyQuestions.length - 1) {
+    if (questionIndex < activeQuestions.length - 1) {
       setQuestionIndex(questionIndex + 1);
     } else {
       setPhase('scan_account');
@@ -182,21 +201,24 @@ export function SecurityHabitsScreen({
     }
   };
 
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
   // Run App Scan
   useEffect(() => {
     if (phase === 'scan_apps') {
       const runAppsCheck = async () => {
         try {
+          await delay(1500); // Artificial delay for UX
           if (isAppSupported) {
             const result = await adapter.getInstalledApps();
             setInstalledApps(result);
           } else {
             setInstalledApps(null); // Explicitly null for unsupported
           }
-        } catch (e) {
-          console.error(e);
-        } finally {
           setPhase('scan_device');
+        } catch (err) {
+          console.error('App scan failed:', err);
+          setPhase('scan_device'); // Continue anyway
         }
       };
       runAppsCheck();
@@ -208,16 +230,14 @@ export function SecurityHabitsScreen({
     if (phase === 'scan_device') {
       const runDeviceCheck = async () => {
         try {
+          await delay(1500); // Artificial delay for UX
           if (isDeviceSupported) {
-            const signals = await adapter.getDeviceSecuritySignals();
-            setDeviceSignals(signals);
-          } else {
-            const signals = await adapter.getDeviceSecuritySignals();
-            setDeviceSignals(signals);
+            const res = await adapter.getDeviceSecuritySignals();
+            setDeviceSignals(res);
           }
-        } catch (e) {
-          console.error(e);
-        } finally {
+          setPhase('scan_network');
+        } catch (err) {
+          console.error('Device scan failed:', err);
           setPhase('scan_network');
         }
       };
@@ -230,16 +250,14 @@ export function SecurityHabitsScreen({
     if (phase === 'scan_network') {
       const runNetworkCheck = async () => {
         try {
+          await delay(1500); // Artificial delay for UX
           if (isNetworkSupported) {
-            const signals = await adapter.getNetworkSecuritySignals();
-            setNetworkSignals(signals);
-          } else {
-            const signals = await adapter.getNetworkSecuritySignals();
-            setNetworkSignals(signals);
+            const res = await adapter.getNetworkSecuritySignals();
+            setNetworkSignals(res);
           }
-        } catch (e) {
-          console.error(e);
-        } finally {
+          setPhase('analyzing');
+        } catch (err) {
+          console.error('Network scan failed:', err);
           setPhase('analyzing');
         }
       };
@@ -277,11 +295,28 @@ export function SecurityHabitsScreen({
             networkSignals
           );
           
+          const computedPermissions: Record<string, any[]> = {};
+          if (installedApps?.apps) {
+            for (const app of installedApps.apps) {
+              const req = app.requestedPermissions || [];
+              const grant = (app as any).grantedPermissions || [];
+              const perms = req.map((r: string) => ({
+                permission: r,
+                status: grant.includes(r) ? 'granted' : 'denied',
+                isGranted: grant.includes(r)
+              }));
+              computedPermissions[app.packageName] = perms;
+            }
+          }
+          
           setResult({
             score: score.score,
             grade: score.grade,
             findingsCount: findings.length,
             isPreliminary: score.is_preliminary,
+            apps: installedApps?.apps || [],
+            permissions: computedPermissions,
+            findings: findings || [],
           });
           setPhase('complete');
         } catch (err) {
@@ -359,8 +394,21 @@ export function SecurityHabitsScreen({
   }
 
   if (phase === 'questions') {
-    const q = privacyQuestions[questionIndex];
-    const progress = ((questionIndex) / privacyQuestions.length) * 100;
+    const q = activeQuestions[questionIndex];
+    const progress = ((questionIndex) / activeQuestions.length) * 100;
+    
+    // Helper to get category name
+    const getCategoryName = (cat: string) => {
+      const names: Record<string, string> = {
+        privacy: 'Privacy',
+        account_security: 'Account Security',
+        password_hygiene: 'Password Hygiene',
+        app_security: 'App Security',
+        device_security: 'Device Security',
+        network_security: 'Network Security'
+      };
+      return names[cat] || cat;
+    };
     
     return (
       <div className="max-w-xl mx-auto">
@@ -370,7 +418,7 @@ export function SecurityHabitsScreen({
               Manual Questions
             </span>
             <span className="text-sm font-medium text-slate-900">
-              Privacy
+              {getCategoryName(q.category)}
             </span>
           </div>
           <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
@@ -485,11 +533,7 @@ export function SecurityHabitsScreen({
           <Card>
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-slate-900">Scan Details</h3>
-              {import.meta.env.VITE_DEMO_MODE === 'true' && (
-                <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded tracking-wide">
-                  DEMO DATA
-                </span>
-              )}
+
             </div>
             
             <div className="space-y-3 text-sm divide-y divide-slate-100">
@@ -512,7 +556,7 @@ export function SecurityHabitsScreen({
                     </span>
                     {installedApps && installedApps.source !== 'SCAN_ERROR' && (
                       <span className="text-xs text-slate-500 block">
-                        Source: {installedApps.source === 'DEMO_MOCK' ? 'Simulated data' : installedApps.source === 'ANDROID_PACKAGE_MANAGER' ? 'Android Package Manager' : installedApps.source}
+                        Source: {installedApps.source === 'ANDROID_PACKAGE_MANAGER' ? 'Android Package Manager' : installedApps.source}
                         {installedApps.coveragePercent !== undefined ? ` • Coverage: ${installedApps.coveragePercent}%` : ''}
                       </span>
                     )}
@@ -524,20 +568,97 @@ export function SecurityHabitsScreen({
                   <span className="text-slate-400">Unsupported</span>
                 )}
               </div>
-              <div className="flex justify-between py-2">
-                <span className="text-slate-600">Device Security</span>
-                {isDeviceSupported ? (
-                  <span className="font-medium text-slate-900">Signals assessed</span>
-                ) : (
-                  <span className="text-slate-400">Unsupported</span>
+              <div className="flex flex-col py-2">
+                <div className="flex justify-between mb-2">
+                  <span className="text-slate-600">Device Security</span>
+                  {!isDeviceSupported ? (
+                    <span className="text-slate-400">Unsupported</span>
+                  ) : null}
+                </div>
+                {isDeviceSupported && (
+                  (!deviceSignals || deviceSignals.visibility === 'UNSUPPORTED') ? (
+                    <span className="text-sm text-slate-500">Device security scan unavailable: Unsupported platform or insufficient permissions.</span>
+                  ) : (
+                    <div className="mt-2 space-y-3 text-sm">
+                      <div className="text-slate-600 font-medium">
+                        Checks performed: {[
+                          deviceSignals.osVersion, deviceSignals.securityPatchLevel, deviceSignals.encryptionStatus,
+                          deviceSignals.screenLockStatus, deviceSignals.secureBootStatus, deviceSignals.developerModeStatus,
+                          deviceSignals.rootOrJailbreakStatus, deviceSignals.firewallStatus, deviceSignals.antivirusStatus,
+                          deviceSignals.automaticUpdatesStatus
+                        ].filter(s => s && s.status !== 'UNSUPPORTED').length}
+                      </div>
+                      <div className="grid gap-2">
+                        {[
+                          { name: 'OS Version', signal: deviceSignals.osVersion, explanation: 'Checks if your operating system is up to date.' },
+                          { name: 'Security Patch Level', signal: deviceSignals.securityPatchLevel, explanation: 'Checks if recent security patches are installed.' },
+                          { name: 'Encryption', signal: deviceSignals.encryptionStatus, explanation: 'Checks if your device storage is encrypted.' },
+                          { name: 'Screen Lock', signal: deviceSignals.screenLockStatus, explanation: 'Checks if a screen lock is enabled.' },
+                          { name: 'Secure Boot', signal: deviceSignals.secureBootStatus, explanation: 'Checks if secure boot is enabled.' },
+                          { name: 'Developer Mode', signal: deviceSignals.developerModeStatus, explanation: 'Checks if developer mode is enabled.' },
+                          { name: 'Root/Jailbreak', signal: deviceSignals.rootOrJailbreakStatus, explanation: 'Checks if the device has been rooted or jailbroken.' },
+                          { name: 'Firewall', signal: deviceSignals.firewallStatus, explanation: 'Checks if the system firewall is active.' },
+                          { name: 'Antivirus', signal: deviceSignals.antivirusStatus, explanation: 'Checks for active security software.' },
+                          { name: 'Automatic Updates', signal: deviceSignals.automaticUpdatesStatus, explanation: 'Checks if updates are applied automatically.' },
+                        ].filter(s => s.signal && s.signal.status !== 'UNSUPPORTED').map(s => (
+                          <div key={s.name} className="flex flex-col gap-1 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                            <div className="flex justify-between items-center">
+                              <span className="font-semibold text-slate-800">{s.name}</span>
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                ['CURRENT', 'ENABLED', 'VERIFIED', 'NONE_DETECTED', 'SECURE'].includes(s.signal.status)
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : ['OUTDATED', 'DISABLED', 'NOT_VERIFIED', 'INDICATORS_DETECTED', 'INSECURE'].includes(s.signal.status)
+                                    ? 'bg-amber-100 text-amber-800'
+                                    : 'bg-slate-200 text-slate-700'
+                              }`}>
+                                {s.signal.value || s.signal.status}
+                              </span>
+                            </div>
+                            <span className="text-xs text-slate-500">{s.explanation}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
                 )}
               </div>
-              <div className="flex justify-between py-2">
-                <span className="text-slate-600">Network Security</span>
-                {isNetworkSupported ? (
-                  <span className="font-medium text-slate-900">Signals assessed</span>
-                ) : (
-                  <span className="text-slate-400">Unsupported</span>
+              <div className="flex flex-col py-2 border-t border-slate-100 mt-2 pt-4">
+                <div className="flex justify-between mb-2">
+                  <span className="text-slate-600">Network Security</span>
+                  {!isNetworkSupported ? (
+                    <span className="text-slate-400">Unsupported</span>
+                  ) : null}
+                </div>
+                {isNetworkSupported && (
+                  (!networkSignals || networkSignals.visibility === 'UNSUPPORTED') ? (
+                    <span className="text-sm text-slate-500">Network security scan unavailable: Unsupported platform or insufficient permissions.</span>
+                  ) : (
+                    <div className="mt-2 space-y-3 text-sm">
+                      <div className="grid gap-2">
+                        {[
+                          { name: 'WiFi Security', signal: networkSignals.wifiSecurity },
+                          { name: 'VPN Status', signal: networkSignals.vpnState },
+                          { name: 'DNS Status', signal: networkSignals.dnsConfig },
+                          { name: 'Network Type', signal: networkSignals.connectionType },
+                        ].filter(s => s.signal && s.signal.status !== 'UNSUPPORTED').map(s => (
+                          <div key={s.name} className="flex flex-col gap-1 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                            <div className="flex justify-between items-center">
+                              <span className="font-semibold text-slate-800">{s.name}</span>
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                ['SECURE', 'ENABLED', 'PRIVATE'].includes(s.signal.status)
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : ['INSECURE', 'DISABLED', 'PUBLIC'].includes(s.signal.status)
+                                    ? 'bg-amber-100 text-amber-800'
+                                    : 'bg-slate-200 text-slate-700'
+                              }`}>
+                                {s.signal.value || s.signal.status}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
                 )}
               </div>
             </div>
@@ -546,15 +667,28 @@ export function SecurityHabitsScreen({
 
         <div className="flex gap-3 justify-end">
           <Button variant="outline" onClick={onBackHome}>
-            Back to home
+            Home
           </Button>
-          {result.findingsCount > 0 && (
-            <Button onClick={onViewIssues}>
-              View issues
-              <ChevronRight size={16} />
+          {isAppSupported && result.apps && result.apps.length > 0 && (
+            <Button variant="outline" onClick={() => setShowAppInventory(true)}>
+              View App Inventory
             </Button>
           )}
+          <Button onClick={onComplete}>
+            View Findings
+            <ChevronRight size={16} />
+          </Button>
         </div>
+        
+        {result.apps && (
+          <AppInventoryModal
+            isOpen={showAppInventory}
+            onClose={() => setShowAppInventory(false)}
+            apps={result.apps}
+            permissions={result.permissions}
+            findings={result.findings || []}
+          />
+        )}
       </div>
     );
   }

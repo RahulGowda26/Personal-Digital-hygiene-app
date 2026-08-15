@@ -16,6 +16,7 @@ import { detectPlatform } from '@/platform/SecurityAdapter';
 import type { ProfileRow, SecurityCapability } from '@/types';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { SecurityScanner } from '@/engine/SecurityScanner';
 import { CenteredLoader, ErrorState } from '@/components/ui/Spinner';
 import { userFacingError } from '@/lib/errors';
 
@@ -43,6 +44,7 @@ export function SettingsScreen() {
   const [saved, setSaved] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [debugResult, setDebugResult] = useState<string | null>(null);
 
   const platform = detectPlatform();
 
@@ -215,6 +217,24 @@ export function SettingsScreen() {
           understand your security posture, identify risks, and follow
           step-by-step remediation. It is not an antivirus replacement.
         </p>
+      </Card>
+
+      {/* Debug Diagnostics */}
+      <Card>
+        <div className="flex items-center gap-2 mb-3">
+          <Monitor size={18} className="text-slate-400" />
+          <h3 className="text-base font-semibold text-slate-900">Debug Diagnostics</h3>
+        </div>
+        <p className="text-sm text-slate-600 leading-relaxed mb-4">
+          Test the physical Android connection and native Capacitor plugins with real-time telemetry.
+        </p>
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={() => setCurrentScreen('diagnostics')}
+        >
+          Open Diagnostics
+        </Button>
       </Card>
 
       {/* Danger zone */}

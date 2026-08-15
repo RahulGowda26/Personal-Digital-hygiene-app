@@ -62,7 +62,14 @@ export function IssuesScreen({ onOpenPlaybook }: IssuesScreenProps) {
         const bOpen = b.status === 'open' ? 0 : 1;
         if (aOpen !== bOpen) return aOpen - bOpen;
         // Then by severity
-        return severityRank[a.severity] - severityRank[b.severity];
+        const aSev = typeof severityRank === 'function' ? severityRank(a.severity) : (a.severity === 'critical' ? 0 : a.severity === 'high' ? 1 : a.severity === 'medium' ? 2 : 3);
+        const bSev = typeof severityRank === 'function' ? severityRank(b.severity) : (b.severity === 'critical' ? 0 : b.severity === 'high' ? 1 : b.severity === 'medium' ? 2 : 3);
+        if (aSev !== bSev) return aSev - bSev;
+        
+        // Then by detected_at (newest first)
+        const aTime = new Date(a.detected_at || 0).getTime();
+        const bTime = new Date(b.detected_at || 0).getTime();
+        return bTime - aTime;
       });
   }, [findings]);
 
@@ -125,7 +132,7 @@ export function IssuesScreen({ onOpenPlaybook }: IssuesScreenProps) {
             {filtered.length === 0 ? (
               <Card>
                 <p className="text-sm text-slate-500 text-center py-6">
-                  No issues at this severity level.
+                  No issues at this risk level.
                 </p>
               </Card>
             ) : (
@@ -134,6 +141,16 @@ export function IssuesScreen({ onOpenPlaybook }: IssuesScreenProps) {
                   key={finding.id}
                   finding={finding}
                   onOpenPlaybook={onOpenPlaybook}
+                  onResolve={async () => {
+                    if (!user) return;
+                    try {
+                      const { resolveFinding } = await import('@/services/api');
+                      await resolveFinding(finding.id, user.id);
+                      load();
+                    } catch (e) {
+                      console.error(e);
+                    }
+                  }}
                 />
               ))
             )}
@@ -147,83 +164,90 @@ export function IssuesScreen({ onOpenPlaybook }: IssuesScreenProps) {
 function IssueCard({
   finding,
   onOpenPlaybook,
+  onResolve,
 }: {
   finding: SecurityFinding;
   onOpenPlaybook: (id: string) => void;
+  onResolve: () => void;
 }) {
   const c = severityColors[finding.severity];
   const isResolved = finding.status === 'resolved';
 
   return (
-    <Card
-      className={`border-l-4 ${c.border}`}
-      padding="md"
-    >
-      <div className="flex flex-col gap-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <SeverityBadge severity={finding.severity} />
-            <StatusBadge status={finding.status} />
-          </div>
-          <span className="text-xs text-slate-400 shrink-0">
-            {formatRelativeTime(finding.detected_at)}
-          </span>
-        </div>
-
-        <div>
-          <h3 className="text-base font-semibold text-slate-900">
+    <Card className={`border-l-8 ${c.border} shadow-sm`} padding="lg">
+      <div className="flex flex-col gap-5">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+            <AlertTriangle className={c.text} size={24} />
             {finding.title}
           </h3>
-          <p className="text-xs font-medium text-slate-400 mt-0.5">
-            {categoryLabels[finding.category]}
-          </p>
-        </div>
-
-        <p className="text-sm text-slate-600 leading-relaxed">
-          {finding.description}
-        </p>
-
-        <div className="flex items-center gap-2 text-xs text-slate-400">
-          <span className="capitalize">{finding.confidence} confidence</span>
-          <span>·</span>
-          <span className="capitalize">{finding.platform} platform</span>
-          {finding.source && (
-            <>
-              <span>·</span>
-              <span className="uppercase text-slate-500 font-medium">
-                {finding.source.replace('_', ' ')}
-              </span>
-            </>
+          {isResolved && (
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-sm font-bold">
+              <CheckCircle2 size={16} />
+              Fixed
+            </div>
           )}
         </div>
 
-        {finding.evidence && finding.evidence.length > 0 && (
-          <div className="bg-slate-900 rounded-md p-3 border border-slate-700 mt-2 space-y-1">
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Evidence</p>
-            {finding.evidence.map((ev, i) => (
-              <div key={i} className="text-xs text-slate-300 font-mono">
-                {ev}
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-bold text-slate-500 uppercase tracking-wide">Risk Level:</span>
+          <SeverityBadge severity={finding.severity} />
+        </div>
 
-        {!isResolved && finding.recommended_playbook && (
-          <Button
-            variant="secondary"
-            size="sm"
-            fullWidth
-            onClick={() => onOpenPlaybook(finding.id)}
-          >
-            <AlertTriangle size={14} />
-            Fix this issue
-            <ChevronRight size={14} />
-          </Button>
-        )}
-        {isResolved && (
-          <div className="flex items-center gap-2 text-sm font-medium text-emerald-600">
-            <CheckCircle2 size={16} />
-            Resolved
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-bold text-slate-500 uppercase tracking-wide">Detected:</span>
+          <span className="text-sm font-bold text-slate-900">{formatRelativeTime(finding.detected_at)}</span>
+        </div>
+
+        <div className="bg-slate-50 p-4 rounded-xl space-y-4">
+          <div>
+            <h4 className="text-base font-bold text-slate-900 mb-2">Why we detected this:</h4>
+            {finding.evidence && finding.evidence.length > 0 ? (
+              <div className="space-y-1">
+                {finding.evidence.map((ev, i) => (
+                  <p key={i} className="text-sm text-slate-700 font-medium">{ev}</p>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-700">We found an unexpected security risk in this app.</p>
+            )}
+          </div>
+
+          <div>
+            <h4 className="text-base font-bold text-slate-900 mb-1">Why this matters:</h4>
+            <p className="text-sm text-slate-700 leading-relaxed">
+              {finding.description}
+            </p>
+          </div>
+        </div>
+
+        {!isResolved && (
+          <div className="bg-white border border-slate-200 rounded-xl p-4">
+            <h4 className="text-base font-bold text-slate-900 mb-3">What you can do:</h4>
+            <ol className="list-decimal list-inside space-y-2 text-sm text-slate-700 mb-5 font-medium">
+              <li>Review the permissions requested by this app</li>
+              <li>Remove access to things it doesn't need</li>
+              <li>Uninstall the app if you don't trust it</li>
+            </ol>
+            
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button
+                variant="primary"
+                className="flex-1 text-base py-3"
+                onClick={() => onOpenPlaybook(finding.id)}
+              >
+                Open Settings
+                <ChevronRight size={18} />
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1 text-base py-3 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                onClick={onResolve}
+              >
+                <CheckCircle2 size={18} className="mr-2" />
+                Mark as Fixed
+              </Button>
+            </div>
           </div>
         )}
       </div>

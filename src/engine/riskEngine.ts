@@ -583,7 +583,7 @@ export function runRiskEngine(
         title: f.title || f.appName,
         description: f.reason,
         severity: f.severity,
-        source: 'app_scanner',
+        source: 'android_native_scan',
         platform,
         confidence: f.confidence,
         status: 'open',
@@ -605,7 +605,7 @@ export function runRiskEngine(
         title: f.title,
         description: f.reason,
         severity: f.severity,
-        source: 'device_scanner',
+        source: 'android_native_scan',
         platform,
         confidence: f.confidence,
         status: 'open',
@@ -651,11 +651,31 @@ export function runRiskEngine(
   };
 }
 
-export function calculateDeviceScore(scanResult: import('@/types').ScanResult): { score: number; grade: ScoreGrade } {
+export function calculateDeviceScore(scanResult: import('@/types').ScanResult): { score: number | null; grade: ScoreGrade | 'N/A'; coverage: number } {
+  // If the device wasn't scanned or couldn't be scanned, we have 0 coverage.
+  if (scanResult.status === 'failed') {
+    return { score: null, grade: 'N/A', coverage: 0 };
+  }
+
+  // Count how many components were actually scanned vs not available
+  let totalSignals = 2; // Integrity + Config
+  let availableSignals = 0;
+  
+  if (scanResult.deviceIntegrity.status !== 'not_available' && scanResult.deviceIntegrity.status !== 'error') availableSignals++;
+  if (scanResult.configuration.status !== 'not_available' && scanResult.configuration.status !== 'error') availableSignals++;
+
+  const coverage = Math.round((availableSignals / totalSignals) * 100);
+
+  // Instead of returning null for low coverage (like on Mac), we just note it but still calculate a score.
+  // if (coverage < 50) {
+  //   return { score: null, grade: 'N/A', coverage };
+  // }
+
   let score = 100;
   let maxSeverity: import('@/types').Severity | null = null;
   
   for (const f of scanResult.findings) {
+    if (f.source === 'NOT_AVAILABLE' || f.source === 'UNSUPPORTED') continue;
     if (maxSeverity === null || severityRank(f.severity) < severityRank(maxSeverity)) {
       maxSeverity = f.severity;
     }
@@ -670,6 +690,7 @@ export function calculateDeviceScore(scanResult: import('@/types').ScanResult): 
   return {
     score,
     grade: gradeForScore(score),
+    coverage
   };
 }
 

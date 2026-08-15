@@ -35,6 +35,8 @@ class AppScannerPlugin : Plugin() {
 
     @PluginMethod
     fun getInstalledPackages(call: PluginCall) {
+        val sessionId = call.getString("sessionId") ?: "unknown"
+        android.util.Log.d("SentinelAppScanner", "START id=$sessionId")
         try {
             val context: Context = this.context
             val pm = context.packageManager
@@ -54,13 +56,40 @@ class AppScannerPlugin : Plugin() {
                 } < 5
 
             val appsArray = JSArray()
+            
+            var userAppsCount = 0
+            var systemAppsCount = 0
+            var vendorAppsCount = 0
+            var skippedAppsCount = 0
+            val skipReasons = JSArray()
 
             for (pkg in allPackages) {
-                val appInfo = pkg.applicationInfo ?: continue
+                val appInfo = pkg.applicationInfo
+                if (appInfo == null) {
+                    skippedAppsCount++
+                    skipReasons.put("Package ${pkg.packageName} has no applicationInfo")
+                    continue
+                }
 
-                // Skip system apps
-                val isSystemApp = (appInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
-                if (isSystemApp) continue
+                val isSystemFlag = (appInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
+                val pName = pkg.packageName ?: ""
+                
+                // Categorize
+                val isVendor = isSystemFlag && (pName.startsWith("com.samsung") || 
+                    pName.startsWith("com.vivo") || pName.startsWith("com.oppo") || 
+                    pName.startsWith("com.miui") || pName.startsWith("com.sec") || 
+                    pName.startsWith("com.coloros") || pName.startsWith("com.heytap") ||
+                    pName.startsWith("com.oneplus") || pName.startsWith("com.huawei"))
+                    
+                val isSystemApp = isSystemFlag && !isVendor
+
+                if (isVendor) {
+                    vendorAppsCount++
+                } else if (isSystemApp) {
+                    systemAppsCount++
+                } else {
+                    userAppsCount++
+                }
 
                 val appObj = JSObject()
                 appObj.put("packageName", pkg.packageName)
@@ -69,7 +98,9 @@ class AppScannerPlugin : Plugin() {
                 appObj.put("versionCode", if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) pkg.longVersionCode else pkg.versionCode.toLong())
                 appObj.put("targetSdkVersion", appInfo.targetSdkVersion)
                 appObj.put("installSource", getInstallSource(pm, pkg.packageName))
-                appObj.put("isSystemApp", false)
+                appObj.put("isSystemApp", isSystemApp)
+                appObj.put("isVendorApp", isVendor)
+                appObj.put("isUserApp", !isSystemFlag)
 
                 // Requested permissions and Granted permissions
                 val requestedPermsArray = JSArray()
@@ -94,12 +125,25 @@ class AppScannerPlugin : Plugin() {
             }
 
             val result = JSObject()
-            result.put("apps", appsArray)
-            result.put("totalPackagesReported", totalCount)
+            result.put("totalPackagesDetected", totalCount)
+            result.put("userInstalledApps", userAppsCount)
+            result.put("systemApps", systemAppsCount)
+            result.put("vendorApps", vendorAppsCount)
+            result.put("analyzedApps", appsArray.length())
+            result.put("skippedApps", skippedAppsCount)
+            result.put("skipReasons", skipReasons)
             result.put("visibilityRestricted", visibilityRestricted)
+            result.put("apps", appsArray)
+
+            android.util.Log.d("SentinelAppScanner", "TOTAL PACKAGES=$totalCount id=$sessionId")
+            android.util.Log.d("SentinelAppScanner", "USER APPS=$userAppsCount id=$sessionId")
+            android.util.Log.d("SentinelAppScanner", "SYSTEM APPS=${systemAppsCount + vendorAppsCount} id=$sessionId")
+            android.util.Log.d("SentinelAppScanner", "RETURNING APPS=${appsArray.length()} id=$sessionId")
             call.resolve(result)
 
         } catch (e: Exception) {
+            val sessionId = call.getString("sessionId") ?: "unknown"
+            android.util.Log.d("SentinelAppScanner", "FAILED reason=" + e.message + " id=" + sessionId)
             call.reject("Failed to read installed packages", e)
         }
     }

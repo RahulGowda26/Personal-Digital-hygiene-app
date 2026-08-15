@@ -11,10 +11,12 @@ import { SettingsScreen } from '@/screens/SettingsScreen';
 import { SecurityHabitsScreen } from '@/screens/SecurityHabitsScreen';
 import { FullPageLoader } from '@/components/ui/Spinner';
 import { isSupabaseConfigured } from '@/lib/supabase';
+import { Capacitor } from '@capacitor/core';
 
 function Root() {
   const { user, loading } = useAuth();
   const [tab, setTab] = useState<TabId>('home');
+  const [checkupMode, setCheckupMode] = useState<'all' | 'network'>('all');
   const [playbookFindingId, setPlaybookFindingId] = useState<string | null>(null);
 
   if (loading) return <FullPageLoader label="Loading Sentinel..." />;
@@ -41,13 +43,16 @@ function Root() {
     <AppShell activeTab={tab} onTabChange={setTab}>
       {tab === 'home' && (
         <HomeScreen
-          onRunCheckup={() => setTab('checkup')}
+          onRunCheckup={() => setTab('habits')}
+          onScanNetwork={() => { setCheckupMode('network'); setTab('checkup'); }}
+          onRunHabitsCheckup={() => setTab('habits')}
           onFixNow={() => setTab('issues')}
           onViewIssues={() => setTab('issues')}
         />
       )}
       {tab === 'checkup' && (
         <CheckupScreen
+          mode={checkupMode}
           onViewIssues={() => setTab('issues')}
           onBackHome={() => setTab('home')}
         />
@@ -69,6 +74,21 @@ function Root() {
 }
 
 function ConfigurationRequired() {
+  const isProdOrNative = import.meta.env.PROD || Capacitor.isNativePlatform();
+
+  if (isProdOrNative) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
+        <section className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+          <h1 className="text-2xl font-bold text-slate-900">Sentinel configuration unavailable.</h1>
+          <p className="mt-3 text-sm leading-6 text-slate-600">
+            This build was not configured correctly. Please reinstall a correctly configured build.
+          </p>
+        </section>
+      </main>
+    );
+  }
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
       <section className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">

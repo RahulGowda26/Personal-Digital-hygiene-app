@@ -1,20 +1,14 @@
 import type { PlatformId, SecurityAdapter as ISecurityAdapter } from '@/types';
-import { WebSecurityAdapter } from './WebSecurityAdapter';
 import { AndroidSecurityAdapter } from './AndroidSecurityAdapter';
 import { Capacitor } from '@capacitor/core';
 
 const adapterMap: Partial<Record<PlatformId, () => ISecurityAdapter>> = {
-  web: () => new WebSecurityAdapter(),
   android: () => new AndroidSecurityAdapter(),
 };
 
 let currentAdapter: ISecurityAdapter | null = null;
 
 export function detectPlatform(): PlatformId {
-  // Demo mode override for development/testing
-  if (import.meta.env.VITE_DEMO_MODE === 'true') {
-    return 'android';
-  }
 
   // Capacitor native detection (actual device)
   try {
@@ -37,11 +31,103 @@ export function detectPlatform(): PlatformId {
   return 'web';
 }
 
+class DummySecurityAdapter implements ISecurityAdapter {
+  platform: PlatformId = 'web';
+  
+  private isElectron(): boolean {
+    return typeof window !== 'undefined' && !!(window as any).electronAPI;
+  }
+
+  async getDeviceSecuritySignals() {
+    return {
+      platform: this.platform,
+      osVersion: { id: '', category: 'OS_SECURITY' as any, status: 'UNSUPPORTED' as any, value: '', source: '', confidence: 'low' as any, observedAt: '' },
+      securityPatchLevel: { id: '', category: 'OS_SECURITY' as any, status: 'UNSUPPORTED' as any, value: '', source: '', confidence: 'low' as any, observedAt: '' },
+      encryptionStatus: { id: '', category: 'ENCRYPTION' as any, status: 'UNSUPPORTED' as any, value: '', source: '', confidence: 'low' as any, observedAt: '' },
+      screenLockStatus: { id: '', category: 'SCREEN_LOCK' as any, status: 'UNSUPPORTED' as any, value: '', source: '', confidence: 'low' as any, observedAt: '' },
+      secureBootStatus: { id: '', category: 'SECURE_BOOT' as any, status: 'UNSUPPORTED' as any, value: '', source: '', confidence: 'low' as any, observedAt: '' },
+      developerModeStatus: { id: '', category: 'DEVELOPER_MODE' as any, status: 'UNSUPPORTED' as any, value: '', source: '', confidence: 'low' as any, observedAt: '' },
+      rootOrJailbreakStatus: { id: '', category: 'ROOT_JAILBREAK' as any, status: 'UNSUPPORTED' as any, value: '', source: '', confidence: 'low' as any, observedAt: '' },
+      firewallStatus: { id: '', category: 'FIREWALL' as any, status: 'UNSUPPORTED' as any, value: '', source: '', confidence: 'low' as any, observedAt: '' },
+      antivirusStatus: { id: '', category: 'SECURITY_SOFTWARE' as any, status: 'UNSUPPORTED' as any, value: '', source: '', confidence: 'low' as any, observedAt: '' },
+      automaticUpdatesStatus: { id: '', category: 'SYSTEM_UPDATES' as any, status: 'UNSUPPORTED' as any, value: '', source: '', confidence: 'low' as any, observedAt: '' },
+      visibility: 'UNSUPPORTED' as const,
+      confidence: 'low' as const
+    };
+  }
+  async getNetworkSecuritySignals() {
+    const isElectronEnv = this.isElectron();
+    return {
+      platform: this.platform,
+      connectionType: { id: '', category: 'CONNECTION_TYPE' as any, status: isElectronEnv ? 'SUPPORTED' : 'UNSUPPORTED' as any, value: '', source: '', confidence: 'low' as any, observedAt: '' },
+      tlsStatus: { id: '', category: 'TLS_STATUS' as any, status: 'UNSUPPORTED' as any, value: '', source: '', confidence: 'low' as any, observedAt: '' },
+      wifiSecurity: { id: '', category: 'WIFI_SECURITY' as any, status: isElectronEnv ? 'SUPPORTED' : 'UNSUPPORTED' as any, value: '', source: '', confidence: 'low' as any, observedAt: '' },
+      vpnState: { id: '', category: 'VPN_STATE' as any, status: isElectronEnv ? 'SUPPORTED' : 'UNSUPPORTED' as any, value: '', source: '', confidence: 'low' as any, observedAt: '' },
+      dnsConfig: { id: '', category: 'DNS_CONFIG' as any, status: 'UNSUPPORTED' as any, value: '', source: '', confidence: 'low' as any, observedAt: '' },
+      visibility: isElectronEnv ? 'SUPPORTED' : 'UNSUPPORTED' as const,
+      confidence: isElectronEnv ? 'high' : 'low' as const
+    };
+  }
+  async getInstalledAppSignals() { return []; }
+  async getPermissionSignals() { return []; }
+  async getAccountSecuritySignals() { return []; }
+  async getInstalledApps(): Promise<any> { 
+    if (this.isElectron() && typeof (window as any).electronAPI.scanApps === 'function') {
+      const apps = await (window as any).electronAPI.scanApps();
+      const formattedApps = apps.map((app: any) => ({
+        packageName: app.packageName,
+        appName: app.appName,
+        versionName: app.versionName,
+        versionCode: app.versionCode || 0,
+        isSystemApp: app.isSystemApp,
+        isVendorApp: app.isVendorApp,
+        isUserApp: app.isUserApp,
+        isEnabled: true,
+        requestedPermissions: app.requestedPermissions || [],
+        grantedPermissions: app.grantedPermissions || [],
+        targetSdkVersion: app.targetSdkVersion,
+        installSource: app.installSource,
+      }));
+
+      return {
+        apps: formattedApps,
+        source: 'ANDROID_PACKAGE_MANAGER',
+        totalPackagesDetected: apps.length,
+        userInstalledApps: apps.length,
+        systemApps: 0,
+        vendorApps: 0,
+        analyzedApps: apps.length,
+        skippedApps: 0,
+        skipReasons: [],
+        coveragePercent: 100,
+        visibility: 'FULL',
+        confidence: 'high',
+        scannedAt: new Date().toISOString(),
+      };
+    }
+    return null; 
+  }
+  getCapabilities() { 
+    if (this.isElectron()) {
+      return [
+        { capability: 'app_security' as const, status: 'supported' as const },
+        { capability: 'device_security' as const, status: 'supported' as const },
+        { capability: 'network_security' as const, status: 'supported' as const }
+      ];
+    }
+    return []; 
+  }
+}
+
 export function getSecurityAdapter(): ISecurityAdapter {
   if (currentAdapter) return currentAdapter;
   const platform = detectPlatform();
-  const factory = adapterMap[platform] ?? adapterMap.web;
-  if (!factory) throw new Error(`No security adapter for platform: ${platform}`);
+  const factory = adapterMap[platform];
+  if (!factory) {
+    currentAdapter = new DummySecurityAdapter();
+    currentAdapter.platform = platform;
+    return currentAdapter;
+  }
   currentAdapter = factory();
   return currentAdapter;
 }

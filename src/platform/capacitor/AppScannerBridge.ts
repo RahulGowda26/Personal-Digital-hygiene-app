@@ -13,9 +13,13 @@ import type { AppMetadata, AppScanResult } from '@/types';
 
 export interface NativeAppScanResponse {
   apps: AppMetadata[];
-  /** Total number of packages the OS reported (before filtering). */
-  totalPackagesReported: number;
-  /** Whether visibility was restricted by the OS. */
+  totalPackagesDetected: number;
+  userInstalledApps: number;
+  systemApps: number;
+  vendorApps: number;
+  analyzedApps: number;
+  skippedApps: number;
+  skipReasons: string[];
   visibilityRestricted: boolean;
 }
 
@@ -24,7 +28,7 @@ export interface SentinelAppScannerPlugin {
    * Returns metadata for all user-installed (non-system) packages.
    * Runs entirely on-device — no data leaves the phone.
    */
-  getInstalledPackages(): Promise<NativeAppScanResponse>;
+  getInstalledPackages(options: { sessionId: string }): Promise<NativeAppScanResponse>;
 }
 
 const SentinelAppScanner = registerPlugin<SentinelAppScannerPlugin>('SentinelAppScanner');
@@ -34,17 +38,23 @@ const SentinelAppScanner = registerPlugin<SentinelAppScannerPlugin>('SentinelApp
  * Returns a full AppScanResult with provenance, coverage, and visibility.
  * Throws if Capacitor is not available or the plugin is not registered.
  */
-export async function getInstalledAppsNative(): Promise<AppScanResult> {
-  const result = await SentinelAppScanner.getInstalledPackages();
+export async function getInstalledAppsNative(sessionId: string): Promise<AppScanResult> {
+  const result = await SentinelAppScanner.getInstalledPackages({ sessionId });
   
-  const coveragePercent = result.totalPackagesReported > 0
-    ? Math.round((result.apps.length / result.totalPackagesReported) * 100)
+  const coveragePercent = result.totalPackagesDetected > 0
+    ? Math.round((result.apps.length / result.totalPackagesDetected) * 100)
     : 100;
 
   return {
     apps: result.apps,
     source: 'ANDROID_PACKAGE_MANAGER',
-    totalPackagesReported: result.totalPackagesReported,
+    totalPackagesDetected: result.totalPackagesDetected,
+    userInstalledApps: result.userInstalledApps,
+    systemApps: result.systemApps,
+    vendorApps: result.vendorApps,
+    analyzedApps: result.analyzedApps,
+    skippedApps: result.skippedApps,
+    skipReasons: result.skipReasons,
     coveragePercent,
     visibility: result.visibilityRestricted ? 'LIMITED' : 'FULL',
     confidence: result.visibilityRestricted ? 'medium' : 'high',

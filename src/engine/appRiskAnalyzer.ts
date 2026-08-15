@@ -1,62 +1,41 @@
 import type { AppMetadata, AppRiskFinding, Severity, Confidence } from '@/types';
 
-/**
- * App Risk Analyzer — evidence-based, local-only analysis.
- *
- * This analyzer runs entirely on the device. It inspects app metadata
- * (permissions, install source, target SDK) and produces findings with
- * severity, confidence, and evidence. It does NOT perform malware
- * signature matching — that is a separate concern.
- *
- * Privacy: The raw AppMetadata[] never leaves the device. Only the
- * resulting AppRiskFinding[] (normalized security findings) are
- * transmitted to the backend.
- */
-
-// Dangerous permission groups for evidence collection
-const DANGEROUS_PERMISSIONS: Record<string, string> = {
-  'android.permission.SYSTEM_ALERT_WINDOW': 'Can draw overlays on top of other apps',
-  'android.permission.BIND_ACCESSIBILITY_SERVICE': 'Accessibility services can read screen content and perform actions',
-  'android.permission.READ_SMS': 'Can read SMS messages',
-  'android.permission.RECEIVE_SMS': 'Can intercept incoming SMS messages',
-  'android.permission.SEND_SMS': 'Can send SMS messages (potential financial risk)',
-  'android.permission.READ_CALL_LOG': 'Can read call history',
-  'android.permission.READ_CONTACTS': 'Can read all contacts',
-  'android.permission.RECORD_AUDIO': 'Can record audio via microphone',
-  'android.permission.CAMERA': 'Can access device camera',
-  'android.permission.ACCESS_FINE_LOCATION': 'Can access precise GPS location',
-  'android.permission.READ_EXTERNAL_STORAGE': 'Can read files on shared storage',
-  'android.permission.WRITE_EXTERNAL_STORAGE': 'Can write files on shared storage',
-  'android.permission.REQUEST_INSTALL_PACKAGES': 'Can request to install other apps',
-  'android.permission.INSTALL_PACKAGES': 'Can silently install other apps',
-  'android.permission.READ_PHONE_STATE': 'Can read phone number and device identifiers',
-  'android.permission.PROCESS_OUTGOING_CALLS': 'Can monitor or redirect outgoing calls',
-  'android.permission.BIND_DEVICE_ADMIN': 'Can act as a device administrator',
-  'android.permission.WRITE_SETTINGS': 'Can modify system settings',
-  'android.permission.CHANGE_NETWORK_STATE': 'Can change network connectivity state',
+const PERMISSION_SCORES: Record<string, number> = {
+  'android.permission.CAMERA': 5,
+  'android.permission.RECORD_AUDIO': 10, // Microphone
+  'android.permission.ACCESS_FINE_LOCATION': 5,
+  'android.permission.ACCESS_COARSE_LOCATION': 5,
+  'android.permission.READ_CONTACTS': 15,
+  'android.permission.READ_SMS': 20,
+  'android.permission.RECEIVE_SMS': 20,
+  'android.permission.SEND_SMS': 20,
+  'android.permission.READ_CALL_LOG': 20,
+  'android.permission.BIND_ACCESSIBILITY_SERVICE': 30,
+  'android.permission.BIND_DEVICE_ADMIN': 30,
+  'android.permission.SYSTEM_ALERT_WINDOW': 25, // Overlay
+  'android.permission.READ_EXTERNAL_STORAGE': 10,
+  'android.permission.WRITE_EXTERNAL_STORAGE': 10,
+  'android.permission.MANAGE_EXTERNAL_STORAGE': 10,
 };
 
-// Permission combinations that together indicate elevated risk
-const RISKY_COMBINATIONS: { permissions: string[]; label: string }[] = [
-  {
-    permissions: ['android.permission.SYSTEM_ALERT_WINDOW', 'android.permission.BIND_ACCESSIBILITY_SERVICE'],
-    label: 'Overlay + Accessibility: can draw fake UIs and interact with real apps underneath',
-  },
-  {
-    permissions: ['android.permission.READ_SMS', 'android.permission.INTERNET'],
-    label: 'SMS read + Internet: could exfiltrate SMS verification codes',
-  },
-  {
-    permissions: ['android.permission.RECORD_AUDIO', 'android.permission.ACCESS_FINE_LOCATION', 'android.permission.INTERNET'],
-    label: 'Microphone + GPS + Internet: surveillance-capable combination',
-  },
-  {
-    permissions: ['android.permission.REQUEST_INSTALL_PACKAGES', 'android.permission.BIND_ACCESSIBILITY_SERVICE'],
-    label: 'Can install apps + Accessibility: could silently install and approve malicious apps',
-  },
-];
+export const PERMISSION_FRIENDLY_NAMES: Record<string, string> = {
+  'android.permission.CAMERA': 'Can use your camera to take pictures or video',
+  'android.permission.RECORD_AUDIO': 'Can listen to and record your microphone',
+  'android.permission.ACCESS_FINE_LOCATION': 'Can track your exact location',
+  'android.permission.ACCESS_COARSE_LOCATION': 'Can track your general location',
+  'android.permission.READ_CONTACTS': 'Can read your contacts and address book',
+  'android.permission.READ_SMS': 'Can read your private text messages',
+  'android.permission.RECEIVE_SMS': 'Can monitor incoming text messages',
+  'android.permission.SEND_SMS': 'Can send text messages (which may cost money)',
+  'android.permission.READ_CALL_LOG': 'Can see who you called and who called you',
+  'android.permission.BIND_ACCESSIBILITY_SERVICE': 'Can see everything on your screen and control your device',
+  'android.permission.BIND_DEVICE_ADMIN': 'Can lock your device or erase your data',
+  'android.permission.SYSTEM_ALERT_WINDOW': 'Can draw over other apps to trick you',
+  'android.permission.READ_EXTERNAL_STORAGE': 'Can view your personal files and photos',
+  'android.permission.WRITE_EXTERNAL_STORAGE': 'Can delete or change your personal files',
+  'android.permission.MANAGE_EXTERNAL_STORAGE': 'Has full access to all your files',
+};
 
-// Known trusted install sources
 const TRUSTED_SOURCES = new Set([
   'com.android.vending',        // Google Play Store
   'com.sec.android.app.samsungapps', // Samsung Galaxy Store
@@ -64,143 +43,103 @@ const TRUSTED_SOURCES = new Set([
   'com.huawei.appmarket',       // Huawei AppGallery
 ]);
 
-// Minimum acceptable target SDK (API 28 = Android 9, introduced runtime permissions v2)
-const MIN_ACCEPTABLE_TARGET_SDK = 28;
-// Warning threshold for outdated SDK
-const OUTDATED_TARGET_SDK = 23;
+function getAppCategoryHeuristic(packageName: string, appName: string): string {
+  const normalized = (packageName + ' ' + appName).toLowerCase();
+  if (normalized.includes('map') || normalized.includes('navi') || normalized.includes('transit') || normalized.includes('uber') || normalized.includes('lyft')) {
+    return 'maps';
+  }
+  if (normalized.includes('calc')) {
+    return 'calculator';
+  }
+  if (normalized.includes('camera') || normalized.includes('photo')) {
+    return 'camera';
+  }
+  if (normalized.includes('chat') || normalized.includes('msg') || normalized.includes('whatsapp') || normalized.includes('messenger')) {
+    return 'messaging';
+  }
+  return 'general';
+}
+
+function calculateScore(perms: string[]): number {
+  let score = 0;
+  const counted = new Set<string>();
+  for (const p of perms) {
+    if (PERMISSION_SCORES[p] && !counted.has(p)) {
+      score += PERMISSION_SCORES[p];
+      counted.add(p); // avoid double counting if duplicate
+    }
+  }
+  return score;
+}
 
 export function analyzeApps(apps: AppMetadata[]): AppRiskFinding[] {
   const findings: AppRiskFinding[] = [];
 
   for (const app of apps) {
-    // Generally trust system apps — they come from the device manufacturer
-    if (app.isSystemApp) continue;
+    if (app.isSystemApp || app.isVendorApp) continue;
+
+    const perms = app.requestedPermissions || [];
+    let score = calculateScore(perms);
+
+    const isSideloaded = !app.installSource || !TRUSTED_SOURCES.has(app.installSource);
+    const category = getAppCategoryHeuristic(app.packageName, app.appName);
+
+    // Apply category heuristics
+    const hasLocation = perms.includes('android.permission.ACCESS_FINE_LOCATION');
+    const hasContacts = perms.includes('android.permission.READ_CONTACTS');
+    const hasMicrophone = perms.includes('android.permission.RECORD_AUDIO');
+
+    if (category === 'calculator' && (hasLocation || hasContacts || hasMicrophone)) {
+      score += 40; // High risk for simple tools needing sensitive data
+    }
+
+    if (category === 'maps' && hasLocation) {
+      score -= 5; // Normal for maps
+    }
+
+    if (category === 'camera' && (perms.includes('android.permission.CAMERA') || perms.includes('android.permission.READ_EXTERNAL_STORAGE'))) {
+      score -= 5; // Normal for camera
+    }
+
+    if (isSideloaded) {
+      score += 20;
+    }
+
+    // Determine Severity
+    let severity: Severity = 'low';
+    if (score >= 71) {
+      severity = 'high';
+    } else if (score >= 41) {
+      severity = 'medium';
+    } else if (score >= 21) {
+      severity = 'low';
+    } else {
+      // Safe, skip
+      continue;
+    }
+
+    const friendlyPerms = Array.from(new Set(
+      perms.map(p => PERMISSION_FRIENDLY_NAMES[p]).filter(Boolean)
+    ));
 
     const evidence: string[] = [];
-    let riskScore = 0;
-
-    // 1. Installation source analysis
-    const isSideloaded = !app.installSource || !TRUSTED_SOURCES.has(app.installSource);
+    friendlyPerms.forEach(p => evidence.push(`✓ ${p}`));
+    
     if (isSideloaded) {
-      evidence.push(`Installation source: ${app.installSource || 'Unknown'} (not a trusted app store)`);
-      riskScore += 3;
-    }
-
-    // 2. Target SDK analysis
-    const isVeryOutdated = app.targetSdkVersion < OUTDATED_TARGET_SDK;
-    const isOutdated = app.targetSdkVersion < MIN_ACCEPTABLE_TARGET_SDK;
-    if (isVeryOutdated) {
-      evidence.push(`Targets Android API ${app.targetSdkVersion} — bypasses runtime permissions entirely`);
-      riskScore += 3;
-    } else if (isOutdated) {
-      evidence.push(`Targets Android API ${app.targetSdkVersion} — lacks modern security controls`);
-      riskScore += 1;
-    }
-
-    // 3. Individual dangerous permissions
-    const dangerousPerms: string[] = [];
-    for (const perm of app.requestedPermissions) {
-      if (DANGEROUS_PERMISSIONS[perm]) {
-        dangerousPerms.push(perm);
-      }
-    }
-
-    if (dangerousPerms.length > 0) {
-      for (const perm of dangerousPerms) {
-        evidence.push(`Permission: ${DANGEROUS_PERMISSIONS[perm]}`);
-      }
-      // Scale risk by number of dangerous permissions
-      if (dangerousPerms.length >= 5) riskScore += 3;
-      else if (dangerousPerms.length >= 3) riskScore += 2;
-      else riskScore += 1;
-    }
-
-    // 4. Risky permission combinations
-    const matchedCombinations: string[] = [];
-    for (const combo of RISKY_COMBINATIONS) {
-      if (combo.permissions.every(p => app.requestedPermissions.includes(p))) {
-        matchedCombinations.push(combo.label);
-        riskScore += 3;
-      }
-    }
-    for (const label of matchedCombinations) {
-      evidence.push(`Risky combination: ${label}`);
-    }
-
-    // Skip apps with no evidence
-    if (evidence.length === 0) continue;
-
-    // 5. Determine severity and confidence from accumulated evidence
-    let severity: Severity;
-    let confidence: Confidence;
-
-    if (riskScore >= 9) {
-      // Multiple strong signals: sideloaded + dangerous combos + outdated
-      severity = 'critical';
-      confidence = 'high';
-    } else if (riskScore >= 6) {
-      severity = 'high';
-      confidence = 'high';
-    } else if (riskScore >= 3) {
-      severity = 'medium';
-      confidence = 'medium';
-    } else {
-      severity = 'low';
-      confidence = 'low';
-    }
-
-    // Sideloaded + any risky combination → always at least HIGH
-    if (isSideloaded && matchedCombinations.length > 0 && severity !== 'critical') {
-      severity = 'high';
-      confidence = 'high';
+      evidence.push('✓ Installed from an unknown source');
     }
 
     findings.push({
       appName: app.appName,
       packageName: app.packageName,
+      title: `${app.appName || app.packageName} has access to sensitive data`,
+      reason: `This application can access sensitive data or features. Unnecessary permissions can collect private information.`,
       severity,
-      confidence,
+      confidence: 'high',
       evidence,
-      reason: buildReason(severity, isSideloaded, isOutdated, matchedCombinations.length, dangerousPerms.length),
-      title: buildTitle(severity, app.appName),
-      recommendedPlaybook: severity === 'critical' || severity === 'high' ? 'remove_risky_app' : 'review_app_permissions',
+      recommendedPlaybook: 'review_app_permissions',
     });
   }
 
   return findings;
-}
-
-function buildTitle(severity: Severity, appName: string): string {
-  switch (severity) {
-    case 'critical':
-      return `Critical-risk app detected: ${appName}`;
-    case 'high':
-      return `High-risk app detected: ${appName}`;
-    case 'medium':
-      return `Elevated risk: ${appName}`;
-    case 'low':
-      return `Minor concern: ${appName}`;
-    default:
-      return `Review recommended: ${appName}`;
-  }
-}
-
-function buildReason(
-  severity: Severity,
-  isSideloaded: boolean,
-  isOutdated: boolean,
-  comboCount: number,
-  dangerousPermCount: number,
-): string {
-  const parts: string[] = [];
-  
-  if (isSideloaded) parts.push('installed from an untrusted source');
-  if (isOutdated) parts.push('targets an outdated Android version');
-  if (comboCount > 0) parts.push(`has ${comboCount} risky permission combination${comboCount > 1 ? 's' : ''}`);
-  if (dangerousPermCount > 0) parts.push(`requests ${dangerousPermCount} sensitive permission${dangerousPermCount > 1 ? 's' : ''}`);
-
-  if (parts.length === 0) return 'Review recommended based on available security signals.';
-
-  const joined = parts.join(', ');
-  return `This application ${joined}. ${severity === 'critical' || severity === 'high' ? 'Consider removing it or verifying its legitimacy.' : 'Review whether it needs these capabilities.'}`;
 }

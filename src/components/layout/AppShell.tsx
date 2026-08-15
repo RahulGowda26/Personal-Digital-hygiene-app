@@ -22,8 +22,8 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { id: 'home', label: 'Home', icon: Home },
-  { id: 'checkup', label: 'Checkup', icon: Stethoscope },
-  { id: 'issues', label: 'Issues', icon: AlertTriangle },
+  { id: 'checkup', label: 'Scan', icon: Stethoscope },
+  { id: 'issues', label: 'Problems', icon: AlertTriangle },
   { id: 'learn', label: 'Learn', icon: GraduationCap },
 ];
 
@@ -37,14 +37,14 @@ export function AppShell({ activeTab, onTabChange, children }: AppShellProps) {
   const { user, signOut } = useAuth();
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="min-h-screen bg-theme-6 text-theme-1">
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex fixed inset-y-0 left-0 w-60 flex-col border-r border-slate-200 bg-white">
-        <div className="flex items-center gap-2.5 px-5 h-16 border-b border-slate-100">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-white">
+      <aside className="hidden md:flex fixed inset-y-0 left-0 w-60 flex-col border-r border-theme-5/20 bg-white">
+        <div className="flex items-center gap-2.5 px-5 h-16 border-b border-theme-5/20">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-theme-1 text-white">
             <ShieldCheck size={20} />
           </div>
-          <span className="font-semibold text-slate-900 text-[15px]">
+          <span className="font-semibold text-theme-1 text-[15px]">
             Sentinel
           </span>
         </div>
@@ -58,9 +58,9 @@ export function AppShell({ activeTab, onTabChange, children }: AppShellProps) {
             />
           ))}
         </nav>
-        <div className="border-t border-slate-100 p-3">
+        <div className="border-t border-fiery-lightblue/20 p-3">
           <div className="flex items-center gap-3 px-2 py-2">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-600">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-fiery-lightblue/20 text-sm font-semibold text-fiery-darkblue">
               {(user?.email ?? '?').charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
@@ -71,7 +71,7 @@ export function AppShell({ activeTab, onTabChange, children }: AppShellProps) {
           </div>
           <button
             onClick={() => signOut()}
-            className="mt-2 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+            className="mt-2 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-fiery-darkblue/70 hover:bg-fiery-cream hover:text-fiery-darkred"
           >
             <LogOut size={16} />
             Sign out
@@ -80,21 +80,16 @@ export function AppShell({ activeTab, onTabChange, children }: AppShellProps) {
       </aside>
 
       {/* Mobile top bar */}
-      <header className="md:hidden sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white/90 backdrop-blur px-4 h-14">
+      <header className="md:hidden sticky top-0 z-30 flex items-center justify-between border-b border-fiery-lightblue/20 bg-white/90 backdrop-blur px-4 h-14">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-white">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-fiery-darkred text-white">
             <ShieldCheck size={18} />
           </div>
           <span className="font-semibold text-[15px]">Sentinel</span>
-          {import.meta.env.VITE_DEMO_MODE === 'true' && (
-            <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-900 tracking-wide">
-              DEMO
-            </span>
-          )}
         </div>
         <button
           onClick={() => onTabChange('settings')}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-600"
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-fiery-lightblue/20 text-sm font-semibold text-fiery-darkblue"
           aria-label="Settings"
         >
           {(user?.email ?? '?').charAt(0).toUpperCase()}
@@ -106,11 +101,6 @@ export function AppShell({ activeTab, onTabChange, children }: AppShellProps) {
         {/* Desktop top bar (Settings only) */}
         <header className="hidden md:flex h-16 items-center justify-between px-8">
           <div>
-            {import.meta.env.VITE_DEMO_MODE === 'true' && (
-              <span className="rounded bg-amber-100 px-2 py-1 text-xs font-bold text-amber-900 tracking-wide border border-amber-200">
-                DEMO MODE - Simulated Data
-              </span>
-            )}
           </div>
           <button
             onClick={() => onTabChange('settings')}
@@ -162,14 +152,17 @@ function DesktopNavItem({
   return (
     <button
       onClick={onClick}
-      className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
-        active
-          ? 'bg-slate-100 text-slate-900'
-          : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+      className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
+        active 
+          ? 'bg-theme-1 text-white' 
+          : 'text-theme-4 hover:bg-theme-5 hover:text-white'
       }`}
     >
-      <Icon size={18} />
-      {item.label}
+      <Icon 
+        size={20} 
+        className={active ? 'text-white' : 'text-theme-4 group-hover:text-white'} 
+      />
+      <span className="font-medium text-[15px]">{item.label}</span>
     </button>
   );
 }
@@ -188,7 +181,7 @@ function MobileNavItem({
     <button
       onClick={onClick}
       className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors ${
-        active ? 'text-slate-900' : 'text-slate-400'
+        active ? 'text-theme-1' : 'text-theme-4'
       }`}
     >
       <Icon size={20} strokeWidth={active ? 2.4 : 2} />

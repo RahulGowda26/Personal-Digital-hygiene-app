@@ -1,36 +1,35 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  Stethoscope,
-  AlertTriangle,
-  ChevronRight,
   ShieldCheck,
-  Clock,
-  Info,
+  Smartphone,
+  AppWindow,
+  EyeOff,
+  UserCheck,
+  ChevronRight,
 } from 'lucide-react';
-import type { DashboardData, SecurityCategory, SecurityFinding } from '@/types';
+import type { DashboardData } from '@/types';
 import { fetchDashboard, ensureDevice } from '@/services/api';
 import { useAuth } from '@/auth/AuthContext';
-import { ScoreRing } from '@/components/ui/ScoreRing';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { EmptyState, ErrorState, CenteredLoader } from '@/components/ui/Spinner';
-import {
-  greeting,
-  gradeLabel,
-  formatRelativeTime,
-  formatDateTime,
-  severityRank,
-} from '@/lib/severity';
-import { categoryLabels, categoryShortLabels } from '@/data/checkupQuestions';
 import { userFacingError } from '@/lib/errors';
 
 interface HomeScreenProps {
   onRunCheckup: () => void;
+  onScanNetwork: () => void;
+  onRunHabitsCheckup: () => void;
   onFixNow: () => void;
   onViewIssues: () => void;
 }
 
-export function HomeScreen({ onRunCheckup, onFixNow, onViewIssues }: HomeScreenProps) {
+export function HomeScreen({ 
+  onRunCheckup, 
+  onScanNetwork, 
+  onRunHabitsCheckup,
+  onFixNow, 
+  onViewIssues 
+}: HomeScreenProps) {
   const { user } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,431 +58,143 @@ export function HomeScreen({ onRunCheckup, onFixNow, onViewIssues }: HomeScreenP
   if (error) return <ErrorState message={error} onRetry={load} />;
   if (!data) return null;
 
-  const score = data.latestScore;
-  const openFindings = data.findings.filter(
-    (f) => f.status === 'open' || f.status === 'resolving',
-  );
-  const criticalCount = openFindings.filter((f) => f.severity === 'critical').length;
-  const highCount = openFindings.filter((f) => f.severity === 'high').length;
-  const warningCount = openFindings.filter(
-    (f) => f.severity === 'medium' || f.severity === 'low',
-  ).length;
+  const score = data.latestScore?.score ?? 0;
+  const hasScore = data.latestScore !== null;
+  const openFindings = data.findings.filter((f) => f.status === 'open' || f.status === 'resolving');
   const hasIssues = openFindings.length > 0;
-
   const displayName = user?.email?.split('@')[0] ?? 'there';
 
+  let healthMessage = 'Run a scan to see your protection level';
+  let healthColor = 'text-slate-400';
+  if (hasScore) {
+    if (score >= 80) {
+      healthMessage = 'Your device is mostly protected';
+      healthColor = 'text-emerald-500';
+    } else if (score >= 50) {
+      healthMessage = 'Your device needs attention';
+      healthColor = 'text-amber-500';
+    } else {
+      healthMessage = 'Your device is at risk';
+      healthColor = 'text-red-500';
+    }
+  }
+
+  // App safety metrics
+  const appFindings = openFindings.filter(f => f.category === 'apps');
+  
+  // Privacy metrics
+  const privacyFindings = openFindings.filter(f => f.category === 'privacy');
+
   return (
-    <div className="space-y-6">
-      {/* Greeting */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">
-          {greeting()}, {displayName}
-        </h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Here is a snapshot of your digital security.
-        </p>
-      </div>
-
-      {/* Score + actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card padding="lg" className="flex flex-col md:flex-row md:items-center gap-6">
-          <div className="flex items-center gap-6">
-            {score ? (
-              <ScoreRing
-                score={score.deviceScore || score.score}
-                grade={score.grade}
-                preliminary={score.is_preliminary}
-              />
-            ) : (
-              <NoScorePlaceholder />
-            )}
-            <div className="space-y-1">
-              <h2 className="text-lg font-semibold text-slate-900">
-                Device Security
-              </h2>
-              {score ? (
-                <>
-                  <p className="text-sm text-slate-600">
-                    Your device score is{' '}
-                    <span className="font-semibold text-slate-900">
-                      {score.deviceScore || score.score} / 100
-                    </span>
-                    .
-                  </p>
-                  {hasIssues ? (
-                    <p className="text-sm text-slate-600">
-                      {openFindings.length}{' '}
-                      {openFindings.length === 1 ? 'issue' : 'issues'} need
-                      attention
-                    </p>
-                  ) : (
-                    <p className="text-sm text-emerald-600">
-                      No open issues. Great work.
-                    </p>
-                  )}
-                </>
-              ) : (
-                <p className="text-sm text-slate-500 max-w-xs">
-                  Run your first scan to see your Device Security Score.
-                </p>
-              )}
-            </div>
+    <div className="space-y-6 pb-20">
+      {/* Header */}
+      <div className="flex flex-col items-center justify-center pt-8 pb-4">
+        <h1 className="text-3xl font-bold text-slate-900 mb-2">Hello, {displayName}</h1>
+        {hasScore ? (
+          <div className="flex flex-col items-center">
+            <span className={`text-6xl font-black ${healthColor}`}>{score}<span className="text-2xl text-slate-400 font-bold">/100</span></span>
+            <p className="text-lg font-medium text-slate-600 mt-2">{healthMessage}</p>
           </div>
-        </Card>
-
-        <Card padding="lg" className="flex flex-col md:flex-row md:items-center gap-6">
-          <div className="flex items-center gap-6">
-            {score ? (
-              <ScoreRing
-                score={score.habitsScore || score.score}
-                grade={score.grade}
-                preliminary={score.is_preliminary}
-              />
-            ) : (
-              <NoScorePlaceholder />
-            )}
-            <div className="space-y-1">
-              <h2 className="text-lg font-semibold text-slate-900">
-                Security Habits
-              </h2>
-              {score ? (
-                <>
-                  <p className="text-sm text-slate-600">
-                    Your habits score is{' '}
-                    <span className="font-semibold text-slate-900">
-                      {score.habitsScore || score.score} / 100
-                    </span>
-                    .
-                  </p>
-                  <p className="text-sm text-slate-600">
-                    Based on your security practices.
-                  </p>
-                </>
-              ) : (
-                <p className="text-sm text-slate-500 max-w-xs">
-                  Take the checkup to see your Security Habits Score.
-                </p>
-              )}
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      <div className="flex gap-4">
-        {hasIssues ? (
-          <Button variant="secondary" onClick={onFixNow}>
-            <AlertTriangle size={16} />
-            Fix now
-          </Button>
         ) : (
-          <Button variant="secondary" disabled>
-            <ShieldCheck size={16} />
-            All clear
+          <div className="flex flex-col items-center">
+            <ShieldCheck size={64} className="text-slate-300 mb-2" />
+            <p className="text-lg font-medium text-slate-600">No score yet</p>
+          </div>
+        )}
+        <div className="mt-6 w-full max-w-xs flex flex-col gap-3">
+          <Button onClick={onRunCheckup} size="lg" className="w-full text-lg py-6 shadow-md">
+            Scan Device Now
           </Button>
-        )}
-        <Button variant="outline" onClick={onRunCheckup}>
-          Scan Device
-        </Button>
+          <Button onClick={onScanNetwork} variant="secondary" size="lg" className="w-full text-lg py-6 shadow-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-700">
+            Scan Wi-Fi Security
+          </Button>
+        </div>
       </div>
 
-      {/* Issue summary strip */}
-      {(criticalCount > 0 || highCount > 0 || warningCount > 0) && (
-        <div className="grid grid-cols-3 gap-3">
-          <IssueStat
-            count={criticalCount}
-            label="Critical"
-            color="text-red-600"
-            bg="bg-red-50"
-            border="border-red-200"
-          />
-          <IssueStat
-            count={highCount}
-            label="High"
-            color="text-orange-600"
-            bg="bg-orange-50"
-            border="border-orange-200"
-          />
-          <IssueStat
-            count={warningCount}
-            label="Warnings"
-            color="text-amber-600"
-            bg="bg-amber-50"
-            border="border-amber-200"
-          />
-        </div>
-      )}
+      <h2 className="text-xl font-bold text-slate-900 px-1">Security Status</h2>
 
-      {/* Security overview */}
-      <Card>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-semibold text-slate-900">
-            Security overview
-          </h3>
-          {score && (
-            <button
-              onClick={onViewIssues}
-              className="text-sm font-medium text-slate-500 hover:text-slate-700"
-            >
-              View issues
-            </button>
-          )}
-        </div>
-        {score ? (
-          <CategoryOverview components={score.components} />
-        ) : (
-          <EmptyState
-            icon={<ShieldCheck size={24} />}
-            title="No score yet"
-            description="Run a checkup to see how each area of your digital security is doing."
-            action={
-              <Button onClick={onRunCheckup}>
-                <Stethoscope size={16} />
-                Run Checkup
-              </Button>
-            }
-          />
-        )}
-      </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        
+        {/* Device Protection */}
+        <StatusCard
+          icon={<Smartphone size={24} className="text-blue-500" />}
+          title="Device Protection"
+          status={hasScore ? "Protected" : "Unknown"}
+          details={hasScore ? "Screen lock active, Encryption on" : "Scan to check"}
+          onClick={onViewIssues}
+        />
 
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Last checkup */}
-        <Card>
-          <div className="flex items-center gap-2 mb-3">
-            <Clock size={18} className="text-slate-400" />
-            <h3 className="text-base font-semibold text-slate-900">
-              Last checkup
-            </h3>
-          </div>
-          {data.lastCheckup ? (
-            <div>
-              <p className="text-sm text-slate-700">
-                {data.lastCheckup.status === 'completed'
-                  ? 'Completed'
-                  : 'In progress'}
-              </p>
-              <p className="text-sm text-slate-500 mt-0.5">
-                {data.lastCheckup.completed_at
-                  ? formatRelativeTime(data.lastCheckup.completed_at)
-                  : formatRelativeTime(data.lastCheckup.started_at)}
-              </p>
-              <p className="text-xs text-slate-400 mt-1">
-                {data.lastCheckup.completed_at
-                  ? formatDateTime(data.lastCheckup.completed_at)
-                  : formatDateTime(data.lastCheckup.started_at)}
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-4"
-                onClick={onRunCheckup}
-              >
-                <Stethoscope size={14} />
-                Run Checkup
-              </Button>
-            </div>
-          ) : (
-            <div>
-              <p className="text-sm text-slate-500">
-                You have not run a checkup yet.
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-4"
-                onClick={onRunCheckup}
-              >
-                <Stethoscope size={14} />
-                Run your first checkup
-              </Button>
-            </div>
-          )}
-        </Card>
+        {/* App Safety */}
+        <StatusCard
+          icon={<AppWindow size={24} className="text-emerald-500" />}
+          title="App Safety"
+          status={hasScore ? (appFindings.length > 0 ? `${appFindings.length} Risky Apps` : "Safe") : "Unknown"}
+          details={hasScore ? "Dangerous permissions checked" : "Scan to check"}
+          onClick={onViewIssues}
+          alert={appFindings.length > 0}
+        />
 
-        {/* Recent activity */}
-        <Card>
-          <h3 className="text-base font-semibold text-slate-900 mb-3">
-            Recent activity
-          </h3>
-          {data.recentEvents.length > 0 ? (
-            <ul className="space-y-2.5">
-              {data.recentEvents.map((event) => (
-                <li key={event.id} className="flex items-start gap-3">
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-300" />
-                  <div className="min-w-0">
-                    <p className="text-sm text-slate-700">
-                      {eventLabel(event.event_type)}
-                    </p>
-                    <p className="text-xs text-slate-400">
-                      {formatRelativeTime(event.created_at)}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-slate-500">
-              No recent activity. Run a checkup to get started.
-            </p>
-          )}
-        </Card>
+        {/* Privacy Protection */}
+        <StatusCard
+          icon={<EyeOff size={24} className="text-purple-500" />}
+          title="Privacy Protection"
+          status={hasScore ? (privacyFindings.length > 0 ? "Review Needed" : "Safe") : "Unknown"}
+          details={hasScore ? "Camera, Mic, and Location access checked" : "Scan to check"}
+          onClick={onViewIssues}
+          alert={privacyFindings.length > 0}
+        />
+
+        {/* Account Safety */}
+        <StatusCard
+          icon={<UserCheck size={24} className="text-orange-500" />}
+          title="Account Safety (Survey)"
+          status={hasScore ? "Checked" : "Unknown"}
+          details={hasScore ? "Data leaks and password exposure" : "Click to take the security habits survey"}
+          onClick={onRunHabitsCheckup}
+        />
+
       </div>
 
-      {/* Top priority issues preview */}
-      {hasIssues && (
-        <Card>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base font-semibold text-slate-900">
-              Top priorities
-            </h3>
-            <button
-              onClick={onViewIssues}
-              className="flex items-center text-sm font-medium text-slate-500 hover:text-slate-700"
-            >
-              View all <ChevronRight size={14} />
-            </button>
-          </div>
-          <div className="space-y-3">
-            {[...openFindings]
-              .sort((a, b) => severityRank[a.severity] - severityRank[b.severity])
-              .slice(0, 3)
-              .map((f) => (
-                <FindingRow key={f.id} finding={f} onClick={onViewIssues} />
-              ))}
-          </div>
-        </Card>
-      )}
     </div>
   );
 }
 
-function NoScorePlaceholder() {
-  return (
-    <div
-      className="flex flex-col items-center justify-center rounded-full border-2 border-dashed border-slate-200 bg-slate-50 text-slate-400"
-      style={{ width: 180, height: 180 }}
-    >
-      <ShieldCheck size={32} />
-      <span className="mt-2 text-xs font-medium">No score yet</span>
-    </div>
-  );
-}
-
-function IssueStat({
-  count,
-  label,
-  color,
-  bg,
-  border,
-}: {
-  count: number;
-  label: string;
-  color: string;
-  bg: string;
-  border: string;
-}) {
-  return (
-    <div className={`rounded-xl border ${bg} ${border} px-4 py-3 text-center`}>
-      <p className={`text-2xl font-bold tabular-nums ${color}`}>{count}</p>
-      <p className="text-xs font-medium text-slate-600 mt-0.5">{label}</p>
-    </div>
-  );
-}
-
-function CategoryOverview({
-  components,
-}: {
-  components: { category: SecurityCategory; score: number; insufficientData: boolean }[];
-}) {
-  return (
-    <div className="space-y-3">
-      {components.map((c) => (
-        <div key={c.category}>
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-sm text-slate-700">
-              {categoryLabels[c.category]}
-            </span>
-            <div className="flex items-center gap-2">
-              {c.insufficientData && (
-                <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wide">
-                  Est.
-                </span>
-              )}
-              <span className="text-sm font-semibold tabular-nums text-slate-900">
-                {c.score}
-              </span>
-              <CategoryStatus score={c.score} />
-            </div>
-          </div>
-          <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-700 ${barColor(c.score)}`}
-              style={{ width: `${c.score}%` }}
-            />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function CategoryStatus({ score }: { score: number }) {
-  if (score >= 80)
-    return <span className="text-xs font-medium text-emerald-600">Good</span>;
-  if (score >= 55)
-    return <span className="text-xs font-medium text-amber-600">Fair</span>;
-  return <span className="text-xs font-medium text-red-600">Poor</span>;
-}
-
-function barColor(score: number): string {
-  if (score >= 80) return 'bg-emerald-500';
-  if (score >= 55) return 'bg-amber-500';
-  return 'bg-red-500';
-}
-
-function FindingRow({
-  finding,
+function StatusCard({ 
+  icon, 
+  title, 
+  status, 
+  details, 
   onClick,
-}: {
-  finding: SecurityFinding;
+  alert = false
+}: { 
+  icon: React.ReactNode; 
+  title: string; 
+  status: string; 
+  details: string; 
   onClick: () => void;
+  alert?: boolean;
 }) {
   return (
-    <button
+    <Card 
+      className={`hover:bg-slate-50 transition-colors cursor-pointer ${alert ? 'border-amber-300 bg-amber-50/30' : ''}`} 
       onClick={onClick}
-      className="flex w-full items-start gap-3 rounded-xl border border-slate-100 p-3 text-left hover:bg-slate-50 transition-colors"
+      padding="lg"
     >
-      <span
-        className={`mt-1 h-2 w-2 shrink-0 rounded-full ${dotColor(finding.severity)}`}
-      />
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-slate-900 truncate">
-          {finding.title}
-        </p>
-        <p className="text-xs text-slate-500 mt-0.5">
-          {categoryShortLabels[finding.category]}
-        </p>
+      <div className="flex items-start gap-4">
+        <div className={`p-3 rounded-xl bg-white shadow-sm border ${alert ? 'border-amber-200' : 'border-slate-100'}`}>
+          {icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-lg font-bold text-slate-900">{title}</h3>
+          <p className={`text-base font-semibold ${alert ? 'text-amber-600' : 'text-slate-700'}`}>
+            {status}
+          </p>
+          <p className="text-sm text-slate-500 mt-1">
+            {details}
+          </p>
+        </div>
+        <ChevronRight size={20} className="text-slate-400 mt-2 shrink-0" />
       </div>
-      <ChevronRight size={16} className="text-slate-300 mt-1" />
-    </button>
+    </Card>
   );
-}
-
-function dotColor(severity: string): string {
-  switch (severity) {
-    case 'critical': return 'bg-red-500';
-    case 'high': return 'bg-orange-500';
-    case 'medium': return 'bg-amber-500';
-    case 'low': return 'bg-sky-500';
-    default: return 'bg-slate-400';
-  }
-}
-
-function eventLabel(type: string): string {
-  switch (type) {
-    case 'checkup_completed': return 'Checkup completed';
-    case 'issue_resolved': return 'Issue resolved';
-    case 'playbook_started': return 'Remediation started';
-    case 'playbook_completed': return 'Remediation completed';
-    default: return type.replace(/_/g, ' ');
-  }
 }

@@ -146,135 +146,13 @@ export class SupabaseThreatIntelligenceProvider implements ThreatIntelligencePro
   }
 }
 
-export class MockThreatIntelligenceProvider implements ThreatIntelligenceProvider {
-  async checkAccountExposure(email: string): Promise<BreachCheckResult> {
-    // Simulate network delay
-    await new Promise((r) => setTimeout(r, 1500));
-    
-    const emailHash = await digestMessage(email);
 
-    // Mock behaviors based on email address for testing:
-    // error@test.com -> Error state
-    // clean@test.com -> No breaches
-    // pwned@test.com -> Multiple breaches with passwords
-
-    if (email === 'error@test.com') {
-      return {
-        status: 'error',
-        checkedAt: new Date().toISOString(),
-        provider: 'Mock Provider',
-        accountIdentifierHash: emailHash,
-        breachCount: 0,
-        breaches: [],
-        confidence: 'low',
-        error: 'Breach intelligence is temporarily unavailable. Your previous results have not been changed.',
-      };
-    }
-
-    if (email === 'clean@test.com') {
-      return {
-        status: 'no_breach',
-        checkedAt: new Date().toISOString(),
-        provider: 'Mock Provider',
-        accountIdentifierHash: emailHash,
-        breachCount: 0,
-        breaches: [],
-        confidence: 'high',
-      };
-    }
-
-    // Default: return mock breaches
-    const mockBreaches: BreachExposure[] = [
-      {
-        id: 'MockBreach1',
-        name: 'MockBreach1',
-        title: 'Example Data Corp',
-        domain: 'example.com',
-        breachDate: '2023-08-15',
-        dataClasses: ['Email addresses', 'Passwords', 'Usernames'],
-        verified: true,
-      },
-      {
-        id: 'MockBreach2',
-        name: 'MockBreach2',
-        title: 'Old Forum site',
-        domain: 'forum.example.net',
-        breachDate: '2019-02-10',
-        dataClasses: ['Email addresses', 'IP addresses'],
-        verified: true,
-      },
-    ];
-
-    return {
-      status: 'breach_found',
-      checkedAt: new Date().toISOString(),
-      provider: 'Mock Provider',
-      accountIdentifierHash: emailHash,
-      breachCount: mockBreaches.length,
-      breaches: mockBreaches,
-      confidence: 'high',
-    };
-  }
-
-  async checkPasswordExposure(password: string): Promise<PasswordExposureCheckResult> {
-    // Simulate network delay
-    await new Promise((r) => setTimeout(r, 1000));
-
-    // Mock behaviors based on password string
-    if (password === 'PASSWORD_SERVICE_ERROR') {
-      return {
-        status: 'error',
-        occurrenceCount: 0,
-        checkedAt: new Date().toISOString(),
-        error: 'Service temporarily unavailable.',
-      };
-    }
-
-    if (password === 'PASSWORD_RATE_LIMIT') {
-      return {
-        status: 'rate_limit',
-        occurrenceCount: 0,
-        checkedAt: new Date().toISOString(),
-        error: 'Rate limit exceeded.',
-      };
-    }
-
-    if (password === 'PASSWORD_EXPOSED') {
-      return {
-        status: 'exposed',
-        occurrenceCount: 42,
-        checkedAt: new Date().toISOString(),
-      };
-    }
-
-    if (password === 'PASSWORD_HIGH_OCCURRENCE') {
-      return {
-        status: 'exposed',
-        occurrenceCount: 15432,
-        checkedAt: new Date().toISOString(),
-      };
-    }
-
-    // Default: clean
-    return {
-      status: 'clean',
-      occurrenceCount: 0,
-      checkedAt: new Date().toISOString(),
-    };
-  }
-}
 
 let providerInstance: ThreatIntelligenceProvider | null = null;
 
 export function getThreatIntelligenceProvider(): ThreatIntelligenceProvider {
   if (!providerInstance) {
-    // Use Demo Mode if explicitly enabled, otherwise use the real Supabase implementation
-    if (import.meta.env.VITE_DEMO_MODE === 'true') {
-      console.warn('Using MOCK Threat Intelligence Provider (Demo Mode)');
-      providerInstance = new MockThreatIntelligenceProvider();
-    } else {
-      providerInstance = new SupabaseThreatIntelligenceProvider();
-    }
+    providerInstance = new SupabaseThreatIntelligenceProvider();
   }
   return providerInstance;
 }

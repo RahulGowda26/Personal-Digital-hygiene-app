@@ -12,9 +12,8 @@ import type {
   NetworkSecurityCategory,
   SecurityAdapter,
 } from '@/types';
-import { mockInstalledApps } from './AndroidAppMockData';
 import { getInstalledAppsNative } from './capacitor/AppScannerBridge';
-import { SentinelDeviceScanner } from './capacitor/DeviceScannerBridge';
+import { getDeviceSignalsNative } from './capacitor/DeviceScannerBridge';
 import { Capacitor } from '@capacitor/core';
 
 /**
@@ -37,9 +36,6 @@ export class AndroidSecurityAdapter implements SecurityAdapter {
     }
   }
 
-  private get isDemoMode(): boolean {
-    return import.meta.env.VITE_DEMO_MODE === 'true';
-  }
 
   getCapabilities(): SecurityCapability[] {
     return [
@@ -49,38 +45,40 @@ export class AndroidSecurityAdapter implements SecurityAdapter {
       { platform: 'android', capability: 'privacy', status: 'supported' },
       { platform: 'android', capability: 'breach_check', status: 'supported' },
       { platform: 'android', capability: 'threat_simulation', status: 'supported' },
-      { platform: 'android', capability: 'device_security', status: this.isNative ? 'supported' : (this.isDemoMode ? 'supported' : 'unsupported') },
-      { platform: 'android', capability: 'network_security', status: this.isNative ? 'supported' : (this.isDemoMode ? 'supported' : 'unsupported') },
+      { platform: 'android', capability: 'device_security', status: this.isNative ? 'supported' : 'unsupported' },
+      { platform: 'android', capability: 'network_security', status: this.isNative ? 'supported' : 'unsupported' },
     ];
   }
 
-  async getDeviceSecuritySignals(): Promise<DeviceSecuritySignals> {
+  async getDeviceSecuritySignals(sessionId?: string): Promise<DeviceSecuritySignals> {
     const time = new Date().toISOString();
     const signal = (category: DeviceSecurityCategory, id: string, status: any, value: string): DeviceSecuritySignal => ({
       id,
       category,
       status,
       value,
-      source: this.isNative ? 'ANDROID_SYSTEM' : 'DEMO_MOCK',
+      source: this.isNative ? 'ANDROID_SYSTEM' : 'UNSUPPORTED',
       confidence: this.isNative ? 'high' : 'low',
       observedAt: time,
     });
 
     if (this.isNative) {
       try {
-        const nativeSignals = await SentinelDeviceScanner.getDeviceSignals();
+        const sid = sessionId || 'unknown';
+        const nativeResult = await getDeviceSignalsNative(sid);
+        
         return {
           platform: 'android',
-          osVersion: signal('OS_SECURITY', 'android_os_version', 'SUPPORTED', nativeSignals.osVersion),
-          securityPatchLevel: signal('SYSTEM_UPDATES', 'android_patch_level', 'SUPPORTED', nativeSignals.securityPatch),
-          encryptionStatus: signal('ENCRYPTION', 'android_encryption', nativeSignals.isEncrypted ? 'ENABLED' : 'DISABLED', nativeSignals.isEncrypted ? 'Storage encryption active' : 'Storage encryption inactive'),
-          screenLockStatus: signal('SCREEN_LOCK', 'android_screen_lock', nativeSignals.isDeviceSecure ? 'ENABLED' : 'DISABLED', nativeSignals.isDeviceSecure ? 'Secure lock screen active' : 'No secure lock screen'),
-          secureBootStatus: signal('SECURE_BOOT', 'android_secure_boot', 'UNKNOWN', 'Not reliably detectable from user space'),
-          developerModeStatus: signal('DEVELOPER_MODE', 'android_dev_mode', nativeSignals.isDeveloperModeEnabled ? 'ENABLED' : 'DISABLED', nativeSignals.isDeveloperModeEnabled ? 'Developer mode active' : 'Developer mode disabled'),
-          rootOrJailbreakStatus: signal('ROOT_JAILBREAK', 'android_root', nativeSignals.isRooted ? 'INDICATORS_DETECTED' : 'NONE_DETECTED', nativeSignals.isRooted ? 'Root indicators found' : 'No basic root indicators found'),
-          firewallStatus: signal('FIREWALL', 'android_firewall', 'UNSUPPORTED', 'Native firewall not manageable via apps'),
-          antivirusStatus: signal('SECURITY_SOFTWARE', 'android_antivirus', 'UNSUPPORTED', 'Status not reliably determinable'),
-          automaticUpdatesStatus: signal('SYSTEM_UPDATES', 'android_auto_update', 'UNKNOWN', 'App does not have permission to read update settings'),
+          osVersion: signal('OS_SECURITY', 'android_os_version', 'SUPPORTED', nativeResult.osVersion),
+          securityPatchLevel: signal('SYSTEM_UPDATES', 'android_patch_level', 'SUPPORTED', nativeResult.securityPatch),
+          encryptionStatus: signal('ENCRYPTION', 'android_encryption', nativeResult.isEncrypted ? 'SUPPORTED' : 'UNSUPPORTED', nativeResult.isEncrypted ? 'Encrypted' : 'Unencrypted'),
+          screenLockStatus: signal('SCREEN_LOCK', 'android_screen_lock', nativeResult.isDeviceSecure ? 'SUPPORTED' : 'UNSUPPORTED', nativeResult.isDeviceSecure ? 'Secure' : 'Insecure'),
+          secureBootStatus: signal('SECURE_BOOT', 'android_secure_boot', 'UNKNOWN', 'Cannot verify natively via this API'),
+          developerModeStatus: signal('DEVELOPER_MODE', 'android_dev_mode', nativeResult.isDeveloperModeEnabled ? 'UNSUPPORTED' : 'SUPPORTED', nativeResult.isDeveloperModeEnabled ? 'Enabled' : 'Disabled'),
+          rootOrJailbreakStatus: signal('ROOT_JAILBREAK', 'android_root', nativeResult.isRooted ? 'UNSUPPORTED' : 'SUPPORTED', nativeResult.isRooted ? 'Rooted/Test-Keys' : 'Clean'),
+          firewallStatus: signal('FIREWALL', 'android_firewall', 'UNKNOWN', 'OS does not expose firewall natively'),
+          antivirusStatus: signal('SECURITY_SOFTWARE', 'android_antivirus', 'UNKNOWN', 'OS does not expose AV status natively'),
+          automaticUpdatesStatus: signal('SYSTEM_UPDATES', 'android_auto_update', 'UNKNOWN', 'Requires privileged access'),
           visibility: 'SUPPORTED',
           confidence: 'high',
         };
@@ -104,23 +102,6 @@ export class AndroidSecurityAdapter implements SecurityAdapter {
       }
     }
 
-    if (this.isDemoMode) {
-      return {
-        platform: 'android',
-        osVersion: signal('OS_SECURITY', 'android_os_version', 'SUPPORTED', 'Android 13'),
-        securityPatchLevel: signal('SYSTEM_UPDATES', 'android_patch_level', 'OUTDATED', '2023-01-05'),
-        encryptionStatus: signal('ENCRYPTION', 'android_encryption', 'ENABLED', 'File-Based Encryption (FBE) active'),
-        screenLockStatus: signal('SCREEN_LOCK', 'android_screen_lock', 'ENABLED', 'PIN/Biometric active'),
-        secureBootStatus: signal('SECURE_BOOT', 'android_secure_boot', 'VERIFIED', 'Verified Boot state: GREEN'),
-        developerModeStatus: signal('DEVELOPER_MODE', 'android_dev_mode', 'ENABLED', 'USB Debugging is enabled'),
-        rootOrJailbreakStatus: signal('ROOT_JAILBREAK', 'android_root', 'NONE_DETECTED', 'No root indicators found (SafetyNet/Play Integrity passed)'),
-        firewallStatus: signal('FIREWALL', 'android_firewall', 'UNSUPPORTED', 'Native firewall not manageable via apps'),
-        antivirusStatus: signal('SECURITY_SOFTWARE', 'android_antivirus', 'ENABLED', 'Google Play Protect is active'),
-        automaticUpdatesStatus: signal('SYSTEM_UPDATES', 'android_auto_update', 'UNKNOWN', 'App does not have permission to read update settings'),
-        visibility: 'SUPPORTED',
-        confidence: 'low',
-      };
-    }
 
     return {
       platform: 'android',
@@ -143,13 +124,14 @@ export class AndroidSecurityAdapter implements SecurityAdapter {
     return [];
   }
 
-  async getInstalledApps(): Promise<AppScanResult> {
+  async getInstalledApps(sessionId?: string): Promise<AppScanResult> {
     const now = new Date().toISOString();
 
     // 1. Real native scan via Capacitor plugin
     if (this.isNative) {
       try {
-        const result = await getInstalledAppsNative();
+        const sid = sessionId || 'unknown';
+        const result = await getInstalledAppsNative(sid);
         console.log(`[AppScan] Real scan: ${result.apps.length} apps from PackageManager`);
         return result;
       } catch (err) {
@@ -159,6 +141,13 @@ export class AndroidSecurityAdapter implements SecurityAdapter {
         return {
           apps: [],
           source: 'SCAN_ERROR',
+          totalPackagesDetected: 0,
+          userInstalledApps: 0,
+          systemApps: 0,
+          vendorApps: 0,
+          analyzedApps: 0,
+          skippedApps: 0,
+          skipReasons: [],
           coveragePercent: 0,
           visibility: 'NONE',
           confidence: 'low',
@@ -168,23 +157,17 @@ export class AndroidSecurityAdapter implements SecurityAdapter {
       }
     }
 
-    // 2. Demo mode ONLY: return mock data with explicit DEMO_MOCK provenance
-    if (this.isDemoMode) {
-      console.warn('[AppScan] Demo mode: returning mock Android app data');
-      return {
-        apps: mockInstalledApps,
-        source: 'DEMO_MOCK',
-        coveragePercent: 100,
-        visibility: 'FULL',
-        confidence: 'low',
-        scannedAt: now,
-      };
-    }
-
-    // 3. Not native, not demo: cannot scan
+    // 2. Return unsupported explicitly if not native
     return {
       apps: [],
       source: 'UNSUPPORTED',
+      totalPackagesDetected: 0,
+      userInstalledApps: 0,
+      systemApps: 0,
+      vendorApps: 0,
+      analyzedApps: 0,
+      skippedApps: 0,
+      skipReasons: [],
       coveragePercent: 0,
       visibility: 'NONE',
       confidence: 'low',
@@ -210,14 +193,13 @@ export class AndroidSecurityAdapter implements SecurityAdapter {
 
     return {
       platform: 'android',
-      // Simulating a slightly risky network (e.g. coffee shop Wi-Fi without a VPN)
-      connectionType: signal('CONNECTION_TYPE', 'android_conn_type', 'PUBLIC', 'Wi-Fi (SSID: Starbucks_WiFi)'),
-      tlsStatus: signal('TLS_STATUS', 'android_tls_status', 'UNKNOWN', 'OS does not intercept app TLS natively'),
-      wifiSecurity: signal('WIFI_SECURITY', 'android_wifi_sec', 'INSECURE', 'Open Network (No password)'),
-      vpnState: signal('VPN_STATE', 'android_vpn_state', 'DISABLED', 'No VPN interface active'),
-      dnsConfig: signal('DNS_CONFIG', 'android_dns_config', 'INSECURE', 'Standard DNS provided by DHCP (Unencrypted)'),
-      visibility: 'SUPPORTED',
-      confidence: 'high',
+      connectionType: signal('CONNECTION_TYPE', 'android_conn_type', 'UNSUPPORTED', 'Native scan not implemented'),
+      tlsStatus: signal('TLS_STATUS', 'android_tls_status', 'UNSUPPORTED', 'Native scan not implemented'),
+      wifiSecurity: signal('WIFI_SECURITY', 'android_wifi_sec', 'UNSUPPORTED', 'Native scan not implemented'),
+      vpnState: signal('VPN_STATE', 'android_vpn_state', 'UNSUPPORTED', 'Native scan not implemented'),
+      dnsConfig: signal('DNS_CONFIG', 'android_dns_config', 'UNSUPPORTED', 'Native scan not implemented'),
+      visibility: 'UNSUPPORTED',
+      confidence: 'low',
     };
   }
 
