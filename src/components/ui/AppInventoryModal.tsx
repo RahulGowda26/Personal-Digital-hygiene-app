@@ -127,6 +127,51 @@ export function AppInventoryModal({ isOpen, onClose, apps, permissions, findings
                   {/* Expanded Content */}
                   {isExpanded && (
                     <div className="px-4 pb-4 pt-2 border-t border-slate-100 bg-white/50 text-sm">
+                      
+                      {/* App Security Profile */}
+                      <div className="mb-6 bg-slate-50 border border-slate-200 rounded-xl p-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="font-bold text-slate-800 text-base">App Security Profile</h4>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Risk Score</span>
+                            <span className={`text-lg font-black ${appFindings.length > 0 ? 'text-amber-500' : 'text-emerald-500'}`}>
+                              {appFindings.length > 0 ? Math.max(0, 100 - (appFindings.length * 20)) : 100}/100
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="grid sm:grid-cols-3 gap-4">
+                          <div className="bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
+                            <h5 className="text-xs font-bold text-red-500 uppercase tracking-wider mb-2">High Access</h5>
+                            <ul className="space-y-1 text-slate-700 font-medium">
+                              {appPerms.some(p => p.permission.includes('LOCATION')) && <li>📍 Location</li>}
+                              {appPerms.some(p => p.permission.includes('RECORD_AUDIO')) && <li>🎤 Microphone</li>}
+                              {appPerms.some(p => p.permission.includes('SMS')) && <li>💬 SMS Messages</li>}
+                              {!appPerms.some(p => p.permission.includes('LOCATION') || p.permission.includes('RECORD_AUDIO') || p.permission.includes('SMS')) && <li className="text-slate-400 font-normal">None</li>}
+                            </ul>
+                          </div>
+                          
+                          <div className="bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
+                            <h5 className="text-xs font-bold text-amber-500 uppercase tracking-wider mb-2">Medium Access</h5>
+                            <ul className="space-y-1 text-slate-700 font-medium">
+                              {appPerms.some(p => p.permission.includes('CAMERA')) && <li>📷 Camera</li>}
+                              {appPerms.some(p => p.permission.includes('CONTACTS')) && <li>👥 Contacts</li>}
+                              {appPerms.some(p => p.permission.includes('CALL_LOG')) && <li>📞 Call Logs</li>}
+                              {!appPerms.some(p => p.permission.includes('CAMERA') || p.permission.includes('CONTACTS') || p.permission.includes('CALL_LOG')) && <li className="text-slate-400 font-normal">None</li>}
+                            </ul>
+                          </div>
+
+                          <div className="bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
+                            <h5 className="text-xs font-bold text-blue-500 uppercase tracking-wider mb-2">Low Access</h5>
+                            <ul className="space-y-1 text-slate-700 font-medium">
+                              {appPerms.some(p => p.permission.includes('STORAGE')) && <li>📁 Storage</li>}
+                              {appPerms.some(p => p.permission.includes('INTERNET')) && <li>🌐 Internet</li>}
+                              {!appPerms.some(p => p.permission.includes('STORAGE') || p.permission.includes('INTERNET')) && <li className="text-slate-400 font-normal">None</li>}
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+
                       <div className="grid gap-4">
                         {/* Risks Section */}
                         {appFindings.length > 0 && (

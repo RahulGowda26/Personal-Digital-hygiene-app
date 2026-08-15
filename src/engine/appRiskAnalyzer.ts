@@ -129,6 +129,22 @@ export function analyzeApps(apps: AppMetadata[]): AppRiskFinding[] {
       evidence.push('✓ Installed from an unknown source');
     }
 
+    const dataAccess = {
+      high: [] as string[],
+      medium: [] as string[],
+      low: [] as string[]
+    };
+
+    if (perms.includes('android.permission.ACCESS_FINE_LOCATION') || perms.includes('android.permission.ACCESS_COARSE_LOCATION')) dataAccess.high.push('Location');
+    if (perms.includes('android.permission.READ_CONTACTS')) dataAccess.medium.push('Contacts');
+    if (perms.includes('android.permission.CAMERA')) dataAccess.medium.push('Camera');
+    if (perms.includes('android.permission.RECORD_AUDIO')) dataAccess.high.push('Microphone');
+    if (perms.includes('android.permission.READ_SMS') || perms.includes('android.permission.RECEIVE_SMS')) dataAccess.high.push('SMS Messages');
+    if (perms.includes('android.permission.READ_CALL_LOG')) dataAccess.medium.push('Call Logs');
+    if (perms.includes('android.permission.READ_EXTERNAL_STORAGE') || perms.includes('android.permission.WRITE_EXTERNAL_STORAGE')) dataAccess.low.push('Files & Storage');
+    
+    let riskScore = Math.max(0, 100 - score); // Base 100, minus the risk penalty points
+
     findings.push({
       appName: app.appName,
       packageName: app.packageName,
@@ -138,6 +154,8 @@ export function analyzeApps(apps: AppMetadata[]): AppRiskFinding[] {
       confidence: 'high',
       evidence,
       recommendedPlaybook: 'review_app_permissions',
+      riskScore,
+      dataAccess,
     });
   }
 

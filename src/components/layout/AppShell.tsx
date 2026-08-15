@@ -37,14 +37,14 @@ export function AppShell({ activeTab, onTabChange, children }: AppShellProps) {
   const { user, signOut } = useAuth();
 
   return (
-    <div className="min-h-screen bg-theme-6 text-theme-1">
+    <div className="min-h-screen bg-[#f8f9fa] text-slate-900">
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex fixed inset-y-0 left-0 w-60 flex-col border-r border-theme-5/20 bg-white">
-        <div className="flex items-center gap-2.5 px-5 h-16 border-b border-theme-5/20">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-theme-1 text-white">
+      <aside className="hidden md:flex fixed inset-y-0 left-0 w-60 flex-col border-r border-slate-200 bg-white">
+        <div className="flex items-center gap-2.5 px-5 h-16 border-b border-slate-100">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-white">
             <ShieldCheck size={20} />
           </div>
-          <span className="font-semibold text-theme-1 text-[15px]">
+          <span className="font-semibold text-slate-900 text-[15px]">
             Sentinel
           </span>
         </div>
@@ -58,9 +58,9 @@ export function AppShell({ activeTab, onTabChange, children }: AppShellProps) {
             />
           ))}
         </nav>
-        <div className="border-t border-fiery-lightblue/20 p-3">
+        <div className="border-t border-slate-100 p-3">
           <div className="flex items-center gap-3 px-2 py-2">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-fiery-lightblue/20 text-sm font-semibold text-fiery-darkblue">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-700">
               {(user?.email ?? '?').charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
@@ -71,7 +71,7 @@ export function AppShell({ activeTab, onTabChange, children }: AppShellProps) {
           </div>
           <button
             onClick={() => signOut()}
-            className="mt-2 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-fiery-darkblue/70 hover:bg-fiery-cream hover:text-fiery-darkred"
+            className="mt-2 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
           >
             <LogOut size={16} />
             Sign out
@@ -80,16 +80,16 @@ export function AppShell({ activeTab, onTabChange, children }: AppShellProps) {
       </aside>
 
       {/* Mobile top bar */}
-      <header className="md:hidden sticky top-0 z-30 flex items-center justify-between border-b border-fiery-lightblue/20 bg-white/90 backdrop-blur px-4 h-14">
+      <header className="md:hidden sticky top-0 z-30 flex items-center justify-between border-b border-slate-100 bg-white/90 backdrop-blur px-4 h-14">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-fiery-darkred text-white">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-white">
             <ShieldCheck size={18} />
           </div>
-          <span className="font-semibold text-[15px]">Sentinel</span>
+          <span className="font-semibold text-slate-900 text-[15px]">Sentinel</span>
         </div>
         <button
           onClick={() => onTabChange('settings')}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-fiery-lightblue/20 text-sm font-semibold text-fiery-darkblue"
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-700"
           aria-label="Settings"
         >
           {(user?.email ?? '?').charAt(0).toUpperCase()}
@@ -116,14 +116,14 @@ export function AppShell({ activeTab, onTabChange, children }: AppShellProps) {
           </button>
         </header>
 
-        <div className="mx-auto max-w-5xl px-4 md:px-8 md:py-4">
+        <div className="mx-auto w-full max-w-7xl px-4 md:px-8 md:py-8">
           {children}
         </div>
       </main>
 
       {/* Mobile bottom navigation */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur">
-        <div className="flex items-stretch justify-around">
+      <nav className="md:hidden fixed bottom-6 inset-x-6 z-30 bg-white/90 backdrop-blur-md rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-slate-100">
+        <div className="flex items-center justify-around px-2 py-2">
           {navItems.map((item) => (
             <MobileNavItem
               key={item.id}
@@ -132,6 +132,12 @@ export function AppShell({ activeTab, onTabChange, children }: AppShellProps) {
               onClick={() => onTabChange(item.id)}
             />
           ))}
+          {/* Add Settings directly to bottom nav for mobile to match the 4-icon layout */}
+          <MobileNavItem
+            item={{ id: 'settings', label: 'Settings', icon: Settings }}
+            active={activeTab === 'settings'}
+            onClick={() => onTabChange('settings')}
+          />
         </div>
       </nav>
 
@@ -154,13 +160,13 @@ function DesktopNavItem({
       onClick={onClick}
       className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
         active 
-          ? 'bg-theme-1 text-white' 
-          : 'text-theme-4 hover:bg-theme-5 hover:text-white'
+          ? 'bg-[#1c1c1e] text-white' 
+          : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
       }`}
     >
       <Icon 
         size={20} 
-        className={active ? 'text-white' : 'text-theme-4 group-hover:text-white'} 
+        className={active ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'} 
       />
       <span className="font-medium text-[15px]">{item.label}</span>
     </button>
@@ -180,12 +186,11 @@ function MobileNavItem({
   return (
     <button
       onClick={onClick}
-      className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors ${
-        active ? 'text-theme-1' : 'text-theme-4'
-      }`}
+      className="flex flex-col items-center justify-center p-3 relative"
     >
-      <Icon size={20} strokeWidth={active ? 2.4 : 2} />
-      {item.label}
+      <div className={`flex items-center justify-center w-12 h-12 rounded-full transition-all ${active ? 'bg-transparent border border-slate-300' : 'bg-transparent border border-transparent'}`}>
+        <Icon size={22} strokeWidth={active ? 2.5 : 2} className={active ? 'text-slate-900' : 'text-slate-400'} />
+      </div>
     </button>
   );
 }

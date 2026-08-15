@@ -640,9 +640,19 @@ export function runRiskEngine(
 
   findings.sort((a, b) => severityRank(a.severity) - severityRank(b.severity));
 
+  const deviceScore = components.find(c => c.category === 'device_security')?.score ?? score;
+  const appScore = components.find(c => c.category === 'app_security')?.score ?? score;
+  const privacyScore = components.find(c => c.category === 'privacy')?.score ?? score;
+  const networkScore = components.find(c => c.category === 'network_security')?.score ?? score;
+  const habitsScore = calculateHabitsScore(answers).score; // We'll compute it properly or use existing logic if it was in components. Wait, calculateHabitsScore handles this.
+  // Actually, habits score is part of password_hygiene and account_security. Let's just use the default fallback or explicitly calculate it.
+  
   return {
     score,
-    deviceScore: score, // fallback
+    deviceScore,
+    appScore,
+    privacyScore,
+    networkScore,
     habitsScore: score, // fallback
     grade,
     components,

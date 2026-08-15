@@ -189,6 +189,12 @@ export interface AppRiskFinding {
   reason: string;
   title?: string;
   recommendedPlaybook: string;
+  riskScore?: number;
+  dataAccess?: {
+    high: string[];
+    medium: string[];
+    low: string[];
+  };
 }
 
 export type DeviceSecurityState = 
@@ -346,6 +352,9 @@ export interface RiskScore {
   checkup_id: string;
   score: number;
   deviceScore: number;
+  appScore?: number;
+  privacyScore?: number;
+  networkScore?: number;
   habitsScore: number;
   grade: ScoreGrade;
   components: RiskScoreComponent[];
