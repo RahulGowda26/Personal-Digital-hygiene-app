@@ -10,10 +10,11 @@ import {
   type LucideIcon,
   CheckSquare,
   Wrench,
+  Lock,
 } from 'lucide-react';
 import { useAuth } from '@/auth/AuthContext';
 
-export type TabId = 'home' | 'checkup' | 'issues' | 'tools' | 'learn' | 'settings' | 'habits';
+export type TabId = 'home' | 'checkup' | 'issues' | 'tools' | 'vault' | 'learn' | 'settings' | 'habits';
 
 interface NavItem {
   id: TabId;
@@ -26,6 +27,7 @@ const navItems: NavItem[] = [
   { id: 'checkup', label: 'Scan', icon: Stethoscope },
   { id: 'issues', label: 'Problems', icon: AlertTriangle },
   { id: 'tools', label: 'Tools', icon: Wrench },
+  { id: 'vault', label: 'Vault', icon: Lock },
   { id: 'learn', label: 'Learn', icon: GraduationCap },
 ];
 

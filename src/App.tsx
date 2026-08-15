@@ -9,6 +9,7 @@ import { PlaybookScreen } from '@/screens/PlaybookScreen';
 import { LearnScreen } from '@/screens/LearnScreen';
 import { SettingsScreen } from '@/screens/SettingsScreen';
 import { ToolsScreen } from '@/screens/ToolsScreen';
+import { VaultScreen } from '@/screens/VaultScreen';
 import { SecurityHabitsScreen } from '@/screens/SecurityHabitsScreen';
 import { FullPageLoader } from '@/components/ui/Spinner';
 import { isSupabaseConfigured } from '@/lib/supabase';
@@ -69,6 +70,7 @@ function Root() {
         <IssuesScreen onOpenPlaybook={(id) => setPlaybookFindingId(id)} />
       )}
       {tab === 'tools' && <ToolsScreen />}
+      {tab === 'vault' && <VaultScreen />}
       {tab === 'learn' && <LearnScreen />}
       {tab === 'settings' && <SettingsScreen />}
     </AppShell>
