@@ -466,3 +466,13 @@ export interface DashboardData {
   lastCheckup: CheckupRow | null;
   recentEvents: SecurityEventRow[];
 }
+
+declare global {
+  interface Window {
+    electronAPI?: {
+      getNetworkSignals: () => Promise<any>;
+      scanApps: () => Promise<any>;
+      scanPorts: (host?: string) => Promise<Array<{ port: number, status: string, service: string }>>;
+    };
+  }
+}

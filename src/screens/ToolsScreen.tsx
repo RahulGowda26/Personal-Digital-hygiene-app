@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { checkPasswordBreach } from '@/lib/hibp';
 import { analyzeLink, type LinkAnalysisResult } from '@/lib/urlScanner';
+import { PortScannerCard } from '@/components/tools/PortScannerCard';
 
 export function ToolsScreen() {
   const [password, setPassword] = useState('');
@@ -194,6 +195,9 @@ export function ToolsScreen() {
               </div>
             )}
           </Card>
+          <div className="col-span-1 md:col-span-2">
+            <PortScannerCard />
+          </div>
 
           <Card className="p-6 md:p-8 rounded-[32px] border-slate-100 shadow-sm bg-white hover:shadow-md transition-shadow col-span-1 md:col-span-2 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-8 opacity-5">

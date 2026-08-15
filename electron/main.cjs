@@ -42,6 +42,16 @@ app.on('window-all-closed', () => {
 });
 
 // Setup IPC handlers
+ipcMain.handle('scanPorts', async (event, host) => {
+  const { scanPorts } = require('./portScanner.cjs');
+  try {
+    return await scanPorts(host || '127.0.0.1');
+  } catch (error) {
+    console.error('Error scanning ports:', error);
+    return [];
+  }
+});
+
 ipcMain.handle('getNetworkSignals', async () => {
   let ssid = null;
   let ipAddress = null;
