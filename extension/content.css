@@ -1,0 +1,143 @@
+/* Sentinel Web Protection - Warning Overlay Styles */
+
+#sentinel-warning-overlay {
+  all: initial; /* Reset all inherited styles */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(12px);
+  z-index: 2147483647; /* Max z-index */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+
+#sentinel-warning-overlay.sentinel-visible {
+  opacity: 1;
+}
+
+#sentinel-warning-card {
+  background-color: #ffffff;
+  border-radius: 24px;
+  padding: 40px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  text-align: center;
+  color: #0f172a;
+}
+
+#sentinel-warning-icon {
+  background-color: #fee2e2;
+  color: #ef4444;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+}
+
+#sentinel-warning-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+#sentinel-warning-title {
+  font-size: 24px;
+  font-weight: 800;
+  margin: 0 0 12px;
+  color: #0f172a;
+}
+
+#sentinel-warning-desc {
+  font-size: 15px;
+  color: #64748b;
+  margin: 0 0 24px;
+  line-height: 1.5;
+}
+
+#sentinel-warning-reasons {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 32px;
+  text-align: left;
+}
+
+#sentinel-warning-reasons h4 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  margin: 0 0 12px;
+  font-weight: 700;
+}
+
+#sentinel-warning-reasons ul {
+  margin: 0;
+  padding: 0;
+  list-style-type: none;
+}
+
+#sentinel-warning-reasons li {
+  font-size: 14px;
+  color: #334155;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: flex-start;
+}
+
+#sentinel-warning-reasons li::before {
+  content: "⚠️";
+  margin-right: 8px;
+}
+
+#sentinel-warning-reasons li:last-child {
+  margin-bottom: 0;
+}
+
+#sentinel-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sentinel-btn {
+  border: none;
+  border-radius: 12px;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.sentinel-btn-primary {
+  background-color: #0f172a;
+  color: white;
+}
+
+.sentinel-btn-primary:hover {
+  background-color: #1e293b;
+}
+
+.sentinel-btn-secondary {
+  background-color: transparent;
+  color: #64748b;
+}
+
+.sentinel-btn-secondary:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { KeyRound, ShieldAlert, CheckCircle2, AlertTriangle, Link as LinkIcon, Search, AlertCircle, ArrowRight } from 'lucide-react';
+import { KeyRound, ShieldAlert, CheckCircle2, AlertTriangle, Link as LinkIcon, Search, AlertCircle, ArrowRight, Globe, Download } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { checkPasswordBreach } from '@/lib/hibp';
@@ -193,6 +193,36 @@ export function ToolsScreen() {
                 </div>
               </div>
             )}
+          </Card>
+
+          <Card className="p-6 md:p-8 rounded-[32px] border-slate-100 shadow-sm bg-white hover:shadow-md transition-shadow col-span-1 md:col-span-2 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-5">
+              <Globe size={120} />
+            </div>
+            
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-white">
+                  <Globe size={24} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-xl text-slate-900">Real-Time Web Protection</h3>
+                  <p className="text-sm font-medium text-slate-500">Block malicious sites before they load.</p>
+                </div>
+              </div>
+              
+              <p className="text-slate-600 mb-6 max-w-xl">
+                Get the Sentinel Chrome Extension to automatically track and scan the websites you visit in real-time. It seamlessly blocks phishing links, typosquatting domains, and IP-based threats across your entire browser.
+              </p>
+              
+              <Button 
+                onClick={() => alert("To install the extension:\n1. Open Chrome Extensions (chrome://extensions/)\n2. Enable Developer Mode\n3. Click 'Load unpacked' and select the 'extension' folder in this project.")}
+                className="bg-slate-900 text-white hover:bg-slate-800 rounded-full flex items-center gap-2 px-6"
+              >
+                <Download size={18} />
+                Install Companion Extension
+              </Button>
+            </div>
           </Card>
 
         </div>
