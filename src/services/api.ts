@@ -188,21 +188,24 @@ export async function completeCheckup(
     };
   }
 
-  const findingRows = result.findings.map((f) => ({
-    checkup_id: checkupId,
-    user_id: userId,
-    category: f.category,
-    title: f.title,
-    description: f.description,
-    severity: f.severity,
-    source: f.source,
-    platform: f.platform,
-    confidence: f.confidence,
-    status: f.status,
-    detected_at: f.detected_at,
-    recommended_playbook: f.recommended_playbook,
-    evidence: f.evidence,
-  }));
+  const findingRows = result.findings.map((f) => {
+    // We combine evidence into the description since the database schema lacks an evidence column
+    const evidenceText = f.evidence && f.evidence.length > 0 ? `\n\nEvidence:\n- ${f.evidence.join('\n- ')}` : '';
+    return {
+      checkup_id: checkupId,
+      user_id: userId,
+      category: f.category,
+      title: f.title,
+      description: f.description + evidenceText,
+      severity: f.severity,
+      source: f.source,
+      platform: f.platform,
+      confidence: f.confidence,
+      status: f.status,
+      detected_at: f.detected_at,
+      recommended_playbook: f.recommended_playbook,
+    };
+  });
 
   let returnedFindings: any[] = [];
   if (findingRows.length > 0) {
