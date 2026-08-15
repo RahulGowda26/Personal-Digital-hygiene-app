@@ -90,7 +90,12 @@ export function HomeScreen({
         
         {/* Header */}
         <div className="flex justify-between items-center mb-8 md:mb-10">
-          <h1 className="text-[28px] md:text-4xl font-bold tracking-tight">Home</h1>
+          <div>
+            <h1 className="text-[28px] md:text-4xl font-bold tracking-tight">Home</h1>
+            <p className="text-sm font-medium text-slate-500 mt-1">
+              {new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date())}
+            </p>
+          </div>
           <button className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white flex items-center justify-center shadow-sm border border-slate-100 text-slate-700 hover:bg-slate-50 transition-colors">
             <Calendar size={20} strokeWidth={2.5} />
           </button>
@@ -103,7 +108,7 @@ export function HomeScreen({
             
             {/* Timeline Widget */}
             <div className="flex justify-between items-center px-1">
-              {MOCK_TIMELINE.map((item, idx) => (
+              {generateTimeline().map((item, idx) => (
                 <div key={idx} className="flex flex-col items-center gap-2">
                   <span className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">{item.day}</span>
                   <div 

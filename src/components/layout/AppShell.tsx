@@ -125,7 +125,7 @@ export function AppShell({ activeTab, onTabChange, children }: AppShellProps) {
 
       {/* Mobile bottom navigation */}
       <nav className="md:hidden fixed bottom-6 inset-x-6 z-30 bg-white/90 backdrop-blur-md rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-slate-100/50">
-        <div className="flex items-center justify-around px-2 py-2">
+        <div className="flex items-center justify-between px-6 py-2">
           {navItems.map((item) => (
             <MobileNavItem
               key={item.id}

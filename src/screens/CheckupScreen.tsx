@@ -303,6 +303,15 @@ export function CheckupScreen({
     const isDeviceSafe = deviceIntegrityStatus === 'safe' || (isElectron && !hasFindings);
     const hasScannedApps = Array.isArray(scanResult?.apps) && scanResult.apps.length > 0;
 
+    const appFindingsCount = safeFindings.filter(f => f.category === 'app_security').length;
+    const networkFindingsCount = safeFindings.filter(f => f.category === 'device_security' && f.title.includes('Network')).length;
+    const deviceFindingsCount = safeFindings.filter(f => f.category === 'device_security' && !f.title.includes('Network')).length;
+    
+    const appsScannedCount = scanResult?.apps?.length || 0;
+    const connectedDevicesCount = scanResult?.networkDetails?.deviceCount !== undefined ? scanResult.networkDetails.deviceCount : 'Unknown';
+    const isNetworkSafe = networkFindingsCount === 0;
+    const totalPermissions = scanResult?.apps?.reduce((sum, app) => sum + (app.grantedPermissions?.length || 0), 0) || 0;
+
     return (
       <div className="max-w-xl mx-auto space-y-6 pt-6 pb-20">
         <div className="text-center mb-6">
@@ -330,24 +339,42 @@ export function CheckupScreen({
           </div>
         </Card>
 
-        <div className="grid grid-cols-2 gap-4 mt-6">
-          {isElectron ? (
-            <>
-              <ReportSection icon={<Wifi size={24}/>} label="Network" safe={!hasFindings} />
-              <ReportSection icon={<AppWindow size={24}/>} label="Apps" safe={hasScannedApps} />
-              <div className="col-span-2 bg-slate-50 p-4 rounded-xl flex justify-between items-center border border-slate-100">
-                <span className="text-slate-500 font-medium">Connected Devices</span>
-                <span className="font-bold text-emerald-600 text-lg">{scanResult?.networkDetails?.deviceCount !== undefined ? scanResult.networkDetails.deviceCount : 'Unknown'}</span>
-              </div>
-            </>
-          ) : (
-            <>
-              <ReportSection icon={<Smartphone size={24}/>} label="Device" safe={isDeviceSafe} />
-              <ReportSection icon={<AppWindow size={24}/>} label="Apps" safe={hasScannedApps} />
-              <ReportSection icon={<Lock size={24}/>} label="Permissions" safe={true} />
-              <ReportSection icon={<FileText size={24}/>} label="Report" safe={true} />
-            </>
-          )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+          <ReportSection 
+            icon={<Smartphone size={24}/>} 
+            label="Device Security" 
+            statusText={deviceFindingsCount === 0 ? "Safe" : "Risks Found"} 
+            statusType={deviceFindingsCount === 0 ? "success" : "warning"}
+            subtext={deviceFindingsCount === 0 ? "OS and settings are secure" : `${deviceFindingsCount} device configuration issues found`}
+          />
+          <ReportSection 
+            icon={<AppWindow size={24}/>} 
+            label="App Analysis" 
+            statusText={appFindingsCount === 0 ? "Checked" : "Issues Found"} 
+            statusType={appFindingsCount === 0 ? "success" : "warning"}
+            subtext={`Scanned ${appsScannedCount} apps. ${appFindingsCount === 0 ? 'No malicious apps detected.' : `${appFindingsCount} apps flagged.`}`}
+          />
+          <ReportSection 
+            icon={<Wifi size={24}/>} 
+            label="Network Health" 
+            statusText={isNetworkSafe ? "Secure" : "Vulnerable"} 
+            statusType={isNetworkSafe ? "success" : "error"}
+            subtext={isNetworkSafe ? `Encrypted connection active` : `Unsafe network connection`}
+          />
+          <ReportSection 
+            icon={<Search size={24}/>} 
+            label="Connected Devices" 
+            statusText="Detected" 
+            statusType="info"
+            subtext={`${connectedDevicesCount} devices found on your local network`}
+          />
+          <ReportSection 
+            icon={<Lock size={24}/>} 
+            label="App Permissions" 
+            statusText="Monitored" 
+            statusType="info"
+            subtext={`${totalPermissions} total permissions granted across apps`}
+          />
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 pt-8">
@@ -398,16 +425,46 @@ function ScanProgressItem({ label, active, done }: { label: string; active: bool
   );
 }
 
-function ReportSection({ icon, label, safe }: { icon: React.ReactNode; label: string; safe: boolean }) {
+function ReportSection({ 
+  icon, 
+  label, 
+  statusText, 
+  statusType = 'success', 
+  subtext 
+}: { 
+  icon: React.ReactNode; 
+  label: string; 
+  statusText: string; 
+  statusType?: 'success' | 'warning' | 'error' | 'info'; 
+  subtext?: string 
+}) {
+  const colors = {
+    success: { icon: 'text-emerald-500 bg-emerald-50', text: 'text-emerald-600' },
+    warning: { icon: 'text-amber-500 bg-amber-50', text: 'text-amber-600' },
+    error: { icon: 'text-red-500 bg-red-50', text: 'text-red-600' },
+    info: { icon: 'text-blue-500 bg-blue-50', text: 'text-blue-600' }
+  };
+  
+  const c = colors[statusType];
+
   return (
-    <Card className="p-4 border-slate-200 flex flex-col items-center justify-center text-center gap-2 shadow-sm">
-      <div className={`${safe ? 'text-emerald-500' : 'text-amber-500'}`}>
-        {icon}
+    <Card className="p-4 border-slate-200 flex flex-col items-start gap-3 shadow-sm">
+      <div className="flex items-center gap-3 w-full">
+        <div className={`${c.icon} p-2.5 rounded-xl`}>
+          {icon}
+        </div>
+        <div className="flex-1 leading-tight">
+          <span className="block text-[15px] font-bold text-slate-800 mb-0.5">{label}</span>
+          <span className={`text-[11px] font-bold uppercase tracking-wider ${c.text}`}>
+            {statusText}
+          </span>
+        </div>
       </div>
-      <span className="text-base font-bold text-slate-800">{label}</span>
-      <span className={`text-sm font-semibold capitalize ${safe ? 'text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md' : 'text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md'}`}>
-        {safe ? 'Checked' : 'Warning'}
-      </span>
+      {subtext && (
+        <div className="text-[13px] text-slate-600 font-medium bg-slate-50/80 p-3 rounded-lg w-full border border-slate-100 leading-relaxed">
+          {subtext}
+        </div>
+      )}
     </Card>
   );
 }
