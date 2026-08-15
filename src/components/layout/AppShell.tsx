@@ -124,19 +124,15 @@ export function AppShell({ activeTab, onTabChange, children }: AppShellProps) {
       </main>
 
       {/* Mobile bottom navigation */}
-      <nav className="md:hidden fixed bottom-6 inset-x-4 z-30 bg-white/90 backdrop-blur-md rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-slate-100/50 overflow-hidden">
-        <div className="flex items-center gap-1 overflow-x-auto px-2 py-2 scrollbar-hide" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
-          <style>{`
-            .scrollbar-hide::-webkit-scrollbar { display: none; }
-          `}</style>
+      <nav className="md:hidden fixed bottom-6 inset-x-6 z-30 bg-white/90 backdrop-blur-md rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-slate-100/50">
+        <div className="flex items-center justify-around px-2 py-2">
           {navItems.map((item) => (
-            <div key={item.id} className="flex-shrink-0 snap-center">
-              <MobileNavItem
-                item={item}
-                active={activeTab === item.id}
-                onClick={() => onTabChange(item.id)}
-              />
-            </div>
+            <MobileNavItem
+              key={item.id}
+              item={item}
+              active={activeTab === item.id}
+              onClick={() => onTabChange(item.id)}
+            />
           ))}
         </div>
       </nav>

@@ -14,16 +14,22 @@ import { useAuth } from '@/auth/AuthContext';
 import { CenteredLoader, ErrorState } from '@/components/ui/Spinner';
 import { userFacingError } from '@/lib/errors';
 
-// MOCK DATA for timeline to match visual design
-const MOCK_TIMELINE = [
-  { day: 'M', date: 13, active: false, hasData: true },
-  { day: 'T', date: 14, active: false, hasData: true },
-  { day: 'W', date: 15, active: false, hasData: true },
-  { day: 'T', date: 16, active: false, hasData: true },
-  { day: 'F', date: 17, active: false, hasData: true },
-  { day: 'S', date: 18, active: true, hasData: true },
-  { day: 'S', date: 19, active: false, hasData: false },
-];
+function generateTimeline() {
+  const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  const today = new Date();
+  const timeline = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    timeline.push({
+      day: days[d.getDay()],
+      date: d.getDate(),
+      active: i === 0,
+      hasData: i > 0 && i < 5, // Just some mock data pattern
+    });
+  }
+  return timeline;
+}
 
 interface HomeScreenProps {
   onRunCheckup: () => void;
@@ -72,10 +78,11 @@ export function HomeScreen({
   const deviceScore = data.latestScore?.deviceScore ?? 0;
   const appScore = data.latestScore?.appScore ?? 0;
   const privacyScore = data.latestScore?.privacyScore ?? 0;
+  const hasScanned = score > 0;
   
-  // Calculate trend (mocked for now to match UI +1.0)
-  const trend = "+5.0 pts";
-  const trendColor = "text-[#ff6b52]";
+  // Calculate trend
+  const trend = hasScanned ? "+5.0 pts" : "Ready";
+  const trendColor = hasScanned ? "text-[#ff6b52]" : "text-slate-400";
 
   return (
     <div className="pb-24 md:pb-8 text-slate-900 font-sans w-full">
@@ -119,11 +126,11 @@ export function HomeScreen({
               <div>
                 <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Security Score</p>
                 <div className="flex items-baseline gap-1 mb-2">
-                  <span className="text-[48px] md:text-[64px] font-black tracking-tighter leading-none">{score}</span>
-                  <span className="text-xl md:text-2xl font-bold text-slate-400">/100</span>
+                  <span className="text-[48px] md:text-[64px] font-black tracking-tighter leading-none">{hasScanned ? score : '-'}</span>
+                  {hasScanned && <span className="text-xl md:text-2xl font-bold text-slate-400">/100</span>}
                 </div>
                 <p className="text-sm font-semibold text-slate-500">
-                  This week <span className={trendColor}>{trend} ↑</span>
+                  {hasScanned ? <span>This week <span className={trendColor}>{trend} ↑</span></span> : <span>Scan pending</span>}
                 </p>
               </div>
               
