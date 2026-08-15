@@ -29,6 +29,11 @@ export interface SentinelAppScannerPlugin {
    * Runs entirely on-device — no data leaves the phone.
    */
   getInstalledPackages(options: { sessionId: string }): Promise<NativeAppScanResponse>;
+  
+  /**
+   * Opens the Android native settings page for a specific app package.
+   */
+  openAppSettings(options: { packageName: string }): Promise<void>;
 }
 
 const SentinelAppScanner = registerPlugin<SentinelAppScannerPlugin>('SentinelAppScanner');
@@ -60,4 +65,11 @@ export async function getInstalledAppsNative(sessionId: string): Promise<AppScan
     confidence: result.visibilityRestricted ? 'medium' : 'high',
     scannedAt: new Date().toISOString(),
   };
+}
+
+/**
+ * Open the native Android settings page for an app.
+ */
+export async function openNativeAppSettings(packageName: string): Promise<void> {
+  await SentinelAppScanner.openAppSettings({ packageName });
 }

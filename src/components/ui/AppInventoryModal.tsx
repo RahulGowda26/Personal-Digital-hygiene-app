@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { X, Search, AppWindow, ShieldAlert, ChevronDown, ChevronUp, Lock } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import type { InstalledAppInfo, SecurityFinding, PermissionFinding } from '@/types';
+import { openNativeAppSettings } from '@/platform/capacitor/AppScannerBridge';
 
 interface AppInventoryModalProps {
   isOpen: boolean;
@@ -193,8 +194,19 @@ export function AppInventoryModal({ isOpen, onClose, apps, permissions, findings
                         {/* Details & Permissions */}
                         <div className="grid sm:grid-cols-2 gap-4">
                           <div>
-                            <h4 className="font-semibold text-slate-700 mb-2">App Details</h4>
-                            <ul className="space-y-1 text-slate-600">
+                            <h4 className="font-semibold text-slate-700 mb-2 flex items-center justify-between">
+                              App Details
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openNativeAppSettings(app.packageName).catch(console.error);
+                                }}
+                                className="text-xs font-bold bg-slate-900 text-white px-3 py-1.5 rounded-full hover:bg-slate-800 transition-colors"
+                              >
+                                Manage in Settings
+                              </button>
+                            </h4>
+                            <ul className="space-y-1 text-slate-600 mt-3">
                               <li><span className="font-medium">Package:</span> <span className="font-mono text-xs">{app.packageName}</span></li>
                               <li><span className="font-medium">Target SDK:</span> {app.targetSdkVersion || 'N/A'}</li>
                               <li><span className="font-medium">Enabled:</span> {app.isEnabled ? 'Yes' : 'No'}</li>

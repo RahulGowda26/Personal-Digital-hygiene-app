@@ -148,6 +148,25 @@ class AppScannerPlugin : Plugin() {
         }
     }
 
+    @PluginMethod
+    fun openAppSettings(call: PluginCall) {
+        val packageName = call.getString("packageName")
+        if (packageName == null) {
+            call.reject("Must provide a packageName")
+            return
+        }
+
+        try {
+            val intent = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+            intent.data = android.net.Uri.parse("package:$packageName")
+            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+            call.resolve()
+        } catch (e: Exception) {
+            call.reject("Failed to open app settings", e)
+        }
+    }
+
     /**
      * Determine the install source for a package.
      * - API 30+ (Android 11): use getInstallSourceInfo()
