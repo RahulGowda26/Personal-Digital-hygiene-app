@@ -116,6 +116,7 @@ export interface InstalledAppInfo {
   isUserApp: boolean;
   isEnabled: boolean;
   requestedPermissions: string[];
+  grantedPermissions?: string[];
   targetSdkVersion: number;
   installSource: string | null;
 }
@@ -131,6 +132,9 @@ export interface DeviceIntegrityResult {
   confidence: Confidence;
   checksPerformed: string[];
   issues: string[];
+  osVersion?: string;
+  sdkInt?: number;
+  securityPatch?: string;
 }
 
 export interface SecurityConfigurationResult {
@@ -151,6 +155,7 @@ export interface ScanResult {
   permissions: { [packageName: string]: PermissionFinding[] };
   configuration: SecurityConfigurationResult;
   findings: ScanFinding[];
+  appRiskFindings?: AppRiskFinding[];
   networkDetails?: {
     ssid?: string;
     ipAddress?: string;
@@ -180,16 +185,32 @@ export interface AppScanResult {
   error?: string;
 }
 
+export type PermissionClassification = 'expected' | 'contextual' | 'unexpected';
+export type PermissionStatus = 'granted' | 'not_granted';
+
+export interface PermissionAnalysis {
+  permission: string;
+  status: PermissionStatus;
+  classification: PermissionClassification;
+  explanation: string;
+}
+
 export interface AppRiskFinding {
   appName: string;
   packageName: string;
+  category?: string;
   severity: Severity;
   confidence: Confidence;
-  evidence: string[];
-  reason: string;
-  title?: string;
-  recommendedPlaybook: string;
   riskScore?: number;
+  riskLevel?: 'safe' | 'low' | 'medium' | 'high' | 'critical';
+  permissions?: PermissionAnalysis[];
+  evidence: string[];
+  reasons?: string[];
+  reason?: string; // Legacy support
+  recommendedAction?: string;
+  recommendedPlaybook: string;
+  title?: string;
+  description?: string; // used when mapping to ScanFinding
   dataAccess?: {
     high: string[];
     medium: string[];

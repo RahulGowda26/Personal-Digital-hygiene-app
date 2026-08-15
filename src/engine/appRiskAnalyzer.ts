@@ -1,39 +1,66 @@
-import type { AppMetadata, AppRiskFinding, Severity, Confidence } from '@/types';
-
-const PERMISSION_SCORES: Record<string, number> = {
-  'android.permission.CAMERA': 5,
-  'android.permission.RECORD_AUDIO': 10, // Microphone
-  'android.permission.ACCESS_FINE_LOCATION': 5,
-  'android.permission.ACCESS_COARSE_LOCATION': 5,
-  'android.permission.READ_CONTACTS': 15,
-  'android.permission.READ_SMS': 20,
-  'android.permission.RECEIVE_SMS': 20,
-  'android.permission.SEND_SMS': 20,
-  'android.permission.READ_CALL_LOG': 20,
-  'android.permission.BIND_ACCESSIBILITY_SERVICE': 30,
-  'android.permission.BIND_DEVICE_ADMIN': 30,
-  'android.permission.SYSTEM_ALERT_WINDOW': 25, // Overlay
-  'android.permission.READ_EXTERNAL_STORAGE': 10,
-  'android.permission.WRITE_EXTERNAL_STORAGE': 10,
-  'android.permission.MANAGE_EXTERNAL_STORAGE': 10,
-};
+import type { AppMetadata, AppRiskFinding, Severity, Confidence, PermissionAnalysis, PermissionClassification, PermissionStatus } from '@/types';
 
 export const PERMISSION_FRIENDLY_NAMES: Record<string, string> = {
-  'android.permission.CAMERA': 'Can use your camera to take pictures or video',
-  'android.permission.RECORD_AUDIO': 'Can listen to and record your microphone',
-  'android.permission.ACCESS_FINE_LOCATION': 'Can track your exact location',
-  'android.permission.ACCESS_COARSE_LOCATION': 'Can track your general location',
-  'android.permission.READ_CONTACTS': 'Can read your contacts and address book',
-  'android.permission.READ_SMS': 'Can read your private text messages',
-  'android.permission.RECEIVE_SMS': 'Can monitor incoming text messages',
-  'android.permission.SEND_SMS': 'Can send text messages (which may cost money)',
-  'android.permission.READ_CALL_LOG': 'Can see who you called and who called you',
-  'android.permission.BIND_ACCESSIBILITY_SERVICE': 'Can see everything on your screen and control your device',
-  'android.permission.BIND_DEVICE_ADMIN': 'Can lock your device or erase your data',
-  'android.permission.SYSTEM_ALERT_WINDOW': 'Can draw over other apps to trick you',
-  'android.permission.READ_EXTERNAL_STORAGE': 'Can view your personal files and photos',
-  'android.permission.WRITE_EXTERNAL_STORAGE': 'Can delete or change your personal files',
-  'android.permission.MANAGE_EXTERNAL_STORAGE': 'Has full access to all your files',
+  'android.permission.CAMERA': 'Camera',
+  'android.permission.RECORD_AUDIO': 'Microphone',
+  'android.permission.ACCESS_FINE_LOCATION': 'Precise Location',
+  'android.permission.ACCESS_COARSE_LOCATION': 'Approximate Location',
+  'android.permission.READ_CONTACTS': 'Contacts',
+  'android.permission.READ_SMS': 'Read SMS',
+  'android.permission.RECEIVE_SMS': 'Receive SMS',
+  'android.permission.SEND_SMS': 'Send SMS',
+  'android.permission.READ_CALL_LOG': 'Call Logs',
+  'android.permission.BIND_ACCESSIBILITY_SERVICE': 'Accessibility Service',
+  'android.permission.BIND_DEVICE_ADMIN': 'Device Admin',
+  'android.permission.SYSTEM_ALERT_WINDOW': 'Draw Over Other Apps',
+  'android.permission.READ_EXTERNAL_STORAGE': 'Read Storage',
+  'android.permission.WRITE_EXTERNAL_STORAGE': 'Write Storage',
+  'android.permission.MANAGE_EXTERNAL_STORAGE': 'Manage All Files',
+};
+
+const EXPLANATIONS = {
+  expected: "This permission makes sense because this app uses it for its main features.",
+  contextual: "This permission may be useful for some features, but it isn't essential to the app's main purpose.",
+  unexpected: "This app appears to have access to this, but that access doesn't seem necessary for what this app does."
+};
+
+interface AppProfile {
+  expected: string[];
+  contextual: string[];
+  unexpected: string[];
+}
+
+const APP_PROFILES: Record<string, AppProfile> = {
+  maps: {
+    expected: ['android.permission.ACCESS_FINE_LOCATION', 'android.permission.ACCESS_COARSE_LOCATION'],
+    contextual: ['android.permission.RECORD_AUDIO', 'android.permission.CAMERA'],
+    unexpected: ['android.permission.READ_SMS', 'android.permission.READ_CONTACTS', 'android.permission.READ_CALL_LOG']
+  },
+  messaging: {
+    expected: ['android.permission.CAMERA', 'android.permission.RECORD_AUDIO', 'android.permission.READ_CONTACTS', 'android.permission.READ_EXTERNAL_STORAGE', 'android.permission.WRITE_EXTERNAL_STORAGE'],
+    contextual: ['android.permission.ACCESS_FINE_LOCATION', 'android.permission.ACCESS_COARSE_LOCATION', 'android.permission.READ_SMS'],
+    unexpected: ['android.permission.BIND_DEVICE_ADMIN']
+  },
+  calculator: {
+    expected: [],
+    contextual: [],
+    unexpected: ['android.permission.READ_CONTACTS', 'android.permission.ACCESS_FINE_LOCATION', 'android.permission.RECORD_AUDIO', 'android.permission.CAMERA', 'android.permission.READ_SMS']
+  },
+  camera: {
+    expected: ['android.permission.CAMERA', 'android.permission.RECORD_AUDIO', 'android.permission.READ_EXTERNAL_STORAGE', 'android.permission.WRITE_EXTERNAL_STORAGE'],
+    contextual: ['android.permission.ACCESS_FINE_LOCATION'],
+    unexpected: ['android.permission.READ_CONTACTS', 'android.permission.READ_SMS', 'android.permission.READ_CALL_LOG']
+  },
+  flashlight: {
+    expected: ['android.permission.CAMERA'], // Needed for LED
+    contextual: [],
+    unexpected: ['android.permission.READ_CONTACTS', 'android.permission.ACCESS_FINE_LOCATION', 'android.permission.RECORD_AUDIO', 'android.permission.READ_SMS']
+  },
+  general: {
+    expected: [],
+    contextual: ['android.permission.READ_EXTERNAL_STORAGE', 'android.permission.WRITE_EXTERNAL_STORAGE', 'android.permission.CAMERA'],
+    unexpected: ['android.permission.READ_SMS', 'android.permission.READ_CALL_LOG', 'android.permission.BIND_ACCESSIBILITY_SERVICE']
+  }
 };
 
 const TRUSTED_SOURCES = new Set([
@@ -54,108 +81,176 @@ function getAppCategoryHeuristic(packageName: string, appName: string): string {
   if (normalized.includes('camera') || normalized.includes('photo')) {
     return 'camera';
   }
-  if (normalized.includes('chat') || normalized.includes('msg') || normalized.includes('whatsapp') || normalized.includes('messenger')) {
+  if (normalized.includes('chat') || normalized.includes('msg') || normalized.includes('whatsapp') || normalized.includes('messenger') || normalized.includes('social')) {
     return 'messaging';
+  }
+  if (normalized.includes('flash') || normalized.includes('torch')) {
+    return 'flashlight';
   }
   return 'general';
 }
 
-function calculateScore(perms: string[]): number {
-  let score = 0;
-  const counted = new Set<string>();
-  for (const p of perms) {
-    if (PERMISSION_SCORES[p] && !counted.has(p)) {
-      score += PERMISSION_SCORES[p];
-      counted.add(p); // avoid double counting if duplicate
-    }
+function getPermissionClassification(perm: string, category: string): PermissionClassification {
+  const profile = APP_PROFILES[category] || APP_PROFILES['general'];
+  
+  if (profile.expected.includes(perm)) return 'expected';
+  if (profile.contextual.includes(perm)) return 'contextual';
+  if (profile.unexpected.includes(perm)) return 'unexpected';
+  
+  // Default to unexpected for highly sensitive permissions if not in expected/contextual
+  if (['android.permission.READ_SMS', 'android.permission.READ_CONTACTS', 'android.permission.BIND_ACCESSIBILITY_SERVICE', 'android.permission.RECORD_AUDIO', 'android.permission.ACCESS_FINE_LOCATION'].includes(perm)) {
+    return 'unexpected';
   }
-  return score;
+  
+  return 'contextual';
 }
 
 export function analyzeApps(apps: AppMetadata[]): AppRiskFinding[] {
   const findings: AppRiskFinding[] = [];
 
   for (const app of apps) {
-    if (app.isSystemApp || app.isVendorApp) continue;
-
-    const perms = app.requestedPermissions || [];
-    let score = calculateScore(perms);
-
-    const isSideloaded = !app.installSource || !TRUSTED_SOURCES.has(app.installSource);
+    const isSideloaded = app.installSource && !TRUSTED_SOURCES.has(app.installSource);
     const category = getAppCategoryHeuristic(app.packageName, app.appName);
+    
+    const requested = app.requestedPermissions || [];
+    const granted = app.grantedPermissions || [];
+    
+    const sensitiveRequested = requested.filter(p => PERMISSION_FRIENDLY_NAMES[p]);
+    if (sensitiveRequested.length === 0 && !isSideloaded) continue; // nothing to score
+    
+    let baseRisk = 0;
+    let unexpectedScore = 0;
+    let contextualScore = 0;
+    let suspiciousComboScore = 0;
+    
+    const permissionAnalyses: PermissionAnalysis[] = [];
+    
+    let hasSms = false;
+    let hasInternet = requested.includes('android.permission.INTERNET');
+    let hasContacts = false;
+    let hasLocation = false;
+    let hasMicrophone = false;
+    
+    let unexpectedSensitiveCount = 0;
 
-    // Apply category heuristics
-    const hasLocation = perms.includes('android.permission.ACCESS_FINE_LOCATION');
-    const hasContacts = perms.includes('android.permission.READ_CONTACTS');
-    const hasMicrophone = perms.includes('android.permission.RECORD_AUDIO');
+    for (const perm of sensitiveRequested) {
+      const isGranted = granted.includes(perm);
+      const classification = getPermissionClassification(perm, category);
+      
+      permissionAnalyses.push({
+        permission: PERMISSION_FRIENDLY_NAMES[perm] || perm,
+        status: isGranted ? 'granted' : 'not_granted',
+        classification,
+        explanation: EXPLANATIONS[classification]
+      });
 
-    if (category === 'calculator' && (hasLocation || hasContacts || hasMicrophone)) {
-      score += 40; // High risk for simple tools needing sensitive data
+      if (isGranted) {
+        if (classification === 'unexpected') {
+          unexpectedScore += 30;
+          unexpectedSensitiveCount++;
+        } else if (classification === 'contextual') {
+          contextualScore += 5;
+        }
+      }
+      
+      if (perm.includes('SMS')) hasSms = true;
+      if (perm === 'android.permission.READ_CONTACTS') hasContacts = true;
+      if (perm === 'android.permission.ACCESS_FINE_LOCATION') hasLocation = true;
+      if (perm === 'android.permission.RECORD_AUDIO') hasMicrophone = true;
     }
-
-    if (category === 'maps' && hasLocation) {
-      score -= 5; // Normal for maps
+    
+    if (hasSms && hasInternet && category !== 'messaging') suspiciousComboScore += 25;
+    if (hasContacts && hasLocation && hasMicrophone && category === 'general') suspiciousComboScore += 20;
+    
+    let totalScore = baseRisk + unexpectedScore + contextualScore + suspiciousComboScore;
+    if (isSideloaded) totalScore += 20;
+    
+    if (app.isSystemApp || app.isVendorApp) {
+      totalScore = Math.floor(totalScore * 0.2); // drastically reduce score for system apps
     }
-
-    if (category === 'camera' && (perms.includes('android.permission.CAMERA') || perms.includes('android.permission.READ_EXTERNAL_STORAGE'))) {
-      score -= 5; // Normal for camera
-    }
-
-    if (isSideloaded) {
-      score += 20;
-    }
-
-    // Determine Severity
-    let severity: Severity = 'low';
-    if (score >= 71) {
+    
+    let severity: Severity = 'info';
+    let riskLevel: 'safe' | 'low' | 'medium' | 'high' | 'critical' = 'safe';
+    
+    if (totalScore >= 70 || (isSideloaded && unexpectedSensitiveCount > 0)) {
       severity = 'high';
-    } else if (score >= 41) {
+      riskLevel = 'high';
+    } else if (totalScore >= 40 || unexpectedSensitiveCount > 0) {
       severity = 'medium';
-    } else if (score >= 21) {
+      riskLevel = 'medium';
+    } else if (totalScore >= 20) {
       severity = 'low';
+      riskLevel = 'low';
     } else {
-      // Safe, skip
-      continue;
+      severity = 'info';
+      riskLevel = 'safe';
     }
-
-    const friendlyPerms = Array.from(new Set(
-      perms.map(p => PERMISSION_FRIENDLY_NAMES[p]).filter(Boolean)
-    ));
-
+    const reasons: string[] = [];
     const evidence: string[] = [];
-    friendlyPerms.forEach(p => evidence.push(`✓ ${p}`));
+    
+    const combos: string[] = [];
+    
+    // Collect specific unexpected permissions
+    const unexpectedPermNames = permissionAnalyses
+      .filter(p => p.classification === 'unexpected')
+      .map(p => p.permission);
+      
+    if (unexpectedPermNames.length > 0) {
+      const msg = `This app requests ${unexpectedPermNames.length} unexpected permission(s): ${unexpectedPermNames.join(', ')}.`;
+      reasons.push(msg);
+      evidence.push(msg);
+    }
     
     if (isSideloaded) {
-      evidence.push('✓ Installed from an unknown source');
+      reasons.push('Installed from an unknown source outside of the official Play Store.');
+      evidence.push('Sideloaded application');
+    }
+    
+    if (hasSms && hasInternet && category !== 'messaging') {
+      const msg = `Suspicious combination: Can read SMS and access the Internet, allowing potential SMS data exfiltration.`;
+      combos.push(msg);
+      reasons.push(msg);
+      evidence.push(msg);
+    }
+    if (hasContacts && hasLocation && hasMicrophone && category === 'general') {
+      const msg = `Suspicious combination: Requests Contacts, Location, and Microphone without a clear use case.`;
+      combos.push(msg);
+      reasons.push(msg);
+      evidence.push(msg);
     }
 
-    const dataAccess = {
-      high: [] as string[],
-      medium: [] as string[],
-      low: [] as string[]
-    };
+    let description = 'Routine application analysis.';
+    if (unexpectedPermNames.length > 0 && combos.length > 0) {
+      description = `This app requests access to sensitive data that does not seem necessary for its primary function, and combines permissions in a way that could allow data to be secretly exfiltrated.`;
+    } else if (unexpectedPermNames.length > 0) {
+      description = `This app requests access to sensitive data that does not seem necessary for its primary function. If compromised or malicious, it could access private information it shouldn't have.`;
+    } else if (combos.length > 0) {
+      description = `This app combines permissions in a way that could allow data to be secretly collected and transmitted over the internet without your knowledge.`;
+    } else if (isSideloaded) {
+      description = `Apps installed outside of official stores bypass standard security checks and may contain malware.`;
+    }
 
-    if (perms.includes('android.permission.ACCESS_FINE_LOCATION') || perms.includes('android.permission.ACCESS_COARSE_LOCATION')) dataAccess.high.push('Location');
-    if (perms.includes('android.permission.READ_CONTACTS')) dataAccess.medium.push('Contacts');
-    if (perms.includes('android.permission.CAMERA')) dataAccess.medium.push('Camera');
-    if (perms.includes('android.permission.RECORD_AUDIO')) dataAccess.high.push('Microphone');
-    if (perms.includes('android.permission.READ_SMS') || perms.includes('android.permission.RECEIVE_SMS')) dataAccess.high.push('SMS Messages');
-    if (perms.includes('android.permission.READ_CALL_LOG')) dataAccess.medium.push('Call Logs');
-    if (perms.includes('android.permission.READ_EXTERNAL_STORAGE') || perms.includes('android.permission.WRITE_EXTERNAL_STORAGE')) dataAccess.low.push('Files & Storage');
-    
-    let riskScore = Math.max(0, 100 - score); // Base 100, minus the risk penalty points
+    // Sort permissions so expected is last, unexpected first
+    permissionAnalyses.sort((a, b) => {
+      const rank = { unexpected: 0, contextual: 1, expected: 2 };
+      return rank[a.classification] - rank[b.classification];
+    });
 
     findings.push({
       appName: app.appName,
       packageName: app.packageName,
-      title: `${app.appName || app.packageName} has access to sensitive data`,
-      reason: `This application can access sensitive data or features. Unnecessary permissions can collect private information.`,
+      category,
       severity,
       confidence: 'high',
+      riskScore: Math.max(0, 100 - totalScore),
+      riskLevel,
+      permissions: permissionAnalyses,
       evidence,
+      reasons,
+      recommendedAction: riskLevel === 'high' ? 'Consider uninstalling or restricting permissions.' : 'Review granted permissions.',
       recommendedPlaybook: 'review_app_permissions',
-      riskScore,
-      dataAccess,
+      title: `${app.appName} Privacy Analysis`,
+      description
     });
   }
 

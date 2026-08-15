@@ -20,7 +20,7 @@ import { supabase } from '@/lib/supabase';
 import { ScoreRing } from '@/components/ui/ScoreRing';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { calculateDeviceScore } from '@/engine/riskEngine';
+import { generateScoreFromFindings } from '@/engine/RiskEngine';
 import type { ScanResult } from '@/types';
 import type { ScanPhase } from '@/engine/SecurityScanner';
 import { AppInventoryModal } from '@/components/ui/AppInventoryModal';
@@ -107,9 +107,27 @@ export function CheckupScreen({
                console.error('Failed to insert findings:', JSON.stringify(dbError, null, 2));
              } else {
                console.log("[DATABASE INSERT SUCCESS]");
+               const riskResult = generateScoreFromFindings(findingRows);
+               await supabase.from('risk_scores').insert({
+                 user_id: user.id,
+                 checkup_id: newCheckup.id,
+                 score: riskResult.score,
+                 grade: riskResult.grade,
+                 components: riskResult.components,
+                 is_preliminary: riskResult.isPreliminary,
+               });
              }
           } else {
              console.log("[DATABASE INSERT SUCCESS] No findings to insert");
+             const riskResult = generateScoreFromFindings([]);
+             await supabase.from('risk_scores').insert({
+               user_id: user.id,
+               checkup_id: newCheckup.id,
+               score: riskResult.score,
+               grade: riskResult.grade,
+               components: riskResult.components,
+               is_preliminary: riskResult.isPreliminary,
+             });
           }
         }
       }
@@ -277,7 +295,7 @@ export function CheckupScreen({
     let score: number | null = 0;
     let grade = 'F';
     try {
-      const result = calculateDeviceScore(scanResult);
+      const result = generateScoreFromFindings(safeFindings);
       score = result.score;
       grade = result.grade;
     } catch (e) {
@@ -345,7 +363,11 @@ export function CheckupScreen({
             label="Device Security" 
             statusText={deviceFindingsCount === 0 ? "Safe" : "Risks Found"} 
             statusType={deviceFindingsCount === 0 ? "success" : "warning"}
-            subtext={deviceFindingsCount === 0 ? "OS and settings are secure" : `${deviceFindingsCount} device configuration issues found`}
+            subtext={
+              scanResult?.deviceIntegrity.osVersion
+                ? `${deviceFindingsCount === 0 ? 'OS and settings are secure' : `${deviceFindingsCount} device configuration issues found`} • Android ${scanResult.deviceIntegrity.osVersion} (Patch: ${scanResult.deviceIntegrity.securityPatch || 'Unknown'})`
+                : (deviceFindingsCount === 0 ? "OS and settings are secure" : `${deviceFindingsCount} device configuration issues found`)
+            }
           />
           <ReportSection 
             icon={<AppWindow size={24}/>} 
@@ -399,6 +421,7 @@ export function CheckupScreen({
             apps={scanResult.apps}
             permissions={scanResult.permissions}
             findings={scanResult.findings}
+            appRiskFindings={scanResult.appRiskFindings || []}
           />
         )}
       </div>

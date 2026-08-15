@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { X, Search, AppWindow, ShieldAlert, ChevronDown, ChevronUp, Lock } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
-import type { InstalledAppInfo, SecurityFinding, PermissionFinding } from '@/types';
+import type { InstalledAppInfo, SecurityFinding, PermissionFinding, AppRiskFinding, ScanFinding } from '@/types';
 import { openNativeAppSettings } from '@/platform/capacitor/AppScannerBridge';
 
 interface AppInventoryModalProps {
@@ -9,10 +9,11 @@ interface AppInventoryModalProps {
   onClose: () => void;
   apps: InstalledAppInfo[];
   permissions: { [packageName: string]: PermissionFinding[] };
-  findings: SecurityFinding[];
+  findings: (SecurityFinding | ScanFinding)[];
+  appRiskFindings?: AppRiskFinding[];
 }
 
-export function AppInventoryModal({ isOpen, onClose, apps, permissions, findings }: AppInventoryModalProps) {
+export function AppInventoryModal({ isOpen, onClose, apps, permissions, findings, appRiskFindings = [] }: AppInventoryModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedApp, setExpandedApp] = useState<string | null>(null);
 
@@ -83,6 +84,7 @@ export function AppInventoryModal({ isOpen, onClose, apps, permissions, findings
                     description: `Permission: ${p}`
                  }));
               }
+              const riskFinding = appRiskFindings.find(f => f.packageName === app.packageName);
               const isExpanded = expandedApp === app.packageName;
 
               return (
@@ -136,41 +138,37 @@ export function AppInventoryModal({ isOpen, onClose, apps, permissions, findings
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Risk Score</span>
                             <span className={`text-lg font-black ${appFindings.length > 0 ? 'text-amber-500' : 'text-emerald-500'}`}>
-                              {appFindings.length > 0 ? Math.max(0, 100 - (appFindings.length * 20)) : 100}/100
+                              {riskFinding ? riskFinding.riskScore : (appFindings.length > 0 ? Math.max(0, 100 - (appFindings.length * 20)) : 100)}/100
                             </span>
                           </div>
                         </div>
 
-                        <div className="grid sm:grid-cols-3 gap-4">
-                          <div className="bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
-                            <h5 className="text-xs font-bold text-red-500 uppercase tracking-wider mb-2">High Access</h5>
-                            <ul className="space-y-1 text-slate-700 font-medium">
-                              {appPerms.some(p => p.permission.includes('LOCATION')) && <li>📍 Location</li>}
-                              {appPerms.some(p => p.permission.includes('RECORD_AUDIO')) && <li>🎤 Microphone</li>}
-                              {appPerms.some(p => p.permission.includes('SMS')) && <li>💬 SMS Messages</li>}
-                              {!appPerms.some(p => p.permission.includes('LOCATION') || p.permission.includes('RECORD_AUDIO') || p.permission.includes('SMS')) && <li className="text-slate-400 font-normal">None</li>}
-                            </ul>
+                        {/* Detailed Permissions Analysis */}
+                        {riskFinding && riskFinding.permissions && riskFinding.permissions.length > 0 ? (
+                          <div className="space-y-3">
+                            <h5 className="text-sm font-semibold text-slate-700">Permission Analysis</h5>
+                            <div className="grid gap-2">
+                              {riskFinding.permissions.map((p, idx) => (
+                                <div key={idx} className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm flex flex-col gap-1">
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-medium text-slate-800 flex items-center gap-2">
+                                      {p.permission}
+                                      {p.status === 'not_granted' && (
+                                        <span className="text-[10px] uppercase tracking-wider bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold">Not Granted</span>
+                                      )}
+                                    </span>
+                                    {p.classification === 'expected' && <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">✓ Expected</span>}
+                                    {p.classification === 'contextual' && <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">Review</span>}
+                                    {p.classification === 'unexpected' && <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded-full">🔴 Unexpected</span>}
+                                  </div>
+                                  <p className="text-xs text-slate-500">{p.explanation}</p>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                          
-                          <div className="bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
-                            <h5 className="text-xs font-bold text-amber-500 uppercase tracking-wider mb-2">Medium Access</h5>
-                            <ul className="space-y-1 text-slate-700 font-medium">
-                              {appPerms.some(p => p.permission.includes('CAMERA')) && <li>📷 Camera</li>}
-                              {appPerms.some(p => p.permission.includes('CONTACTS')) && <li>👥 Contacts</li>}
-                              {appPerms.some(p => p.permission.includes('CALL_LOG')) && <li>📞 Call Logs</li>}
-                              {!appPerms.some(p => p.permission.includes('CAMERA') || p.permission.includes('CONTACTS') || p.permission.includes('CALL_LOG')) && <li className="text-slate-400 font-normal">None</li>}
-                            </ul>
-                          </div>
-
-                          <div className="bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
-                            <h5 className="text-xs font-bold text-blue-500 uppercase tracking-wider mb-2">Low Access</h5>
-                            <ul className="space-y-1 text-slate-700 font-medium">
-                              {appPerms.some(p => p.permission.includes('STORAGE')) && <li>📁 Storage</li>}
-                              {appPerms.some(p => p.permission.includes('INTERNET')) && <li>🌐 Internet</li>}
-                              {!appPerms.some(p => p.permission.includes('STORAGE') || p.permission.includes('INTERNET')) && <li className="text-slate-400 font-normal">None</li>}
-                            </ul>
-                          </div>
-                        </div>
+                        ) : (
+                          <div className="text-sm text-slate-500 italic">No sensitive permissions requested.</div>
+                        )}
                       </div>
 
                       <div className="grid gap-4">
@@ -191,51 +189,28 @@ export function AppInventoryModal({ isOpen, onClose, apps, permissions, findings
                           </div>
                         )}
 
-                        {/* Details & Permissions */}
-                        <div className="grid sm:grid-cols-2 gap-4">
-                          <div>
-                            <h4 className="font-semibold text-slate-700 mb-2 flex items-center justify-between">
-                              App Details
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openNativeAppSettings(app.packageName).catch(console.error);
-                                }}
-                                className="text-xs font-bold bg-slate-900 text-white px-3 py-1.5 rounded-full hover:bg-slate-800 transition-colors"
-                              >
-                                Manage in Settings
-                              </button>
-                            </h4>
-                            <ul className="space-y-1 text-slate-600 mt-3">
-                              <li><span className="font-medium">Package:</span> <span className="font-mono text-xs">{app.packageName}</span></li>
-                              <li><span className="font-medium">Target SDK:</span> {app.targetSdkVersion || 'N/A'}</li>
-                              <li><span className="font-medium">Enabled:</span> {app.isEnabled ? 'Yes' : 'No'}</li>
-                            </ul>
-                          </div>
-
-                          <div>
-                            <h4 className="font-semibold text-slate-700 mb-2 flex items-center gap-2">
-                              <Lock size={16} />
-                              Permissions ({appPerms.length})
-                            </h4>
-                            {appPerms.length > 0 ? (
-                              <div className="h-32 overflow-y-auto custom-scrollbar bg-slate-50 p-2 rounded border border-slate-100">
-                                <ul className="space-y-1">
-                                  {appPerms.map((perm, idx) => (
-                                    <li key={idx} className="text-xs text-slate-600 break-words flex items-start gap-1">
-                                      <span className={perm.isGranted ? 'text-emerald-500' : 'text-slate-400'}>
-                                        {perm.isGranted ? '✓' : '✗'}
-                                      </span>
-                                      {perm.permission.replace('android.permission.', '').replace('macOS.permission.', '')}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            ) : (
-                              <p className="text-slate-500 italic">No permissions requested.</p>
-                            )}
-                          </div>
+                        {/* Details */}
+                        <div>
+                          <h4 className="font-semibold text-slate-700 mb-2 flex items-center justify-between">
+                            App Details
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openNativeAppSettings(app.packageName).catch(console.error);
+                              }}
+                              className="text-xs font-bold bg-slate-900 text-white px-3 py-1.5 rounded-full hover:bg-slate-800 transition-colors"
+                            >
+                              Manage in Settings
+                            </button>
+                          </h4>
+                          <ul className="space-y-1 text-slate-600 mt-3">
+                            <li><span className="font-medium">Package:</span> <span className="font-mono text-xs">{app.packageName}</span></li>
+                            <li><span className="font-medium">Category:</span> <span className="capitalize">{riskFinding ? riskFinding.category : 'General'}</span></li>
+                            <li><span className="font-medium">Target SDK:</span> {app.targetSdkVersion || 'N/A'}</li>
+                            <li><span className="font-medium">Enabled:</span> {app.isEnabled ? 'Yes' : 'No'}</li>
+                          </ul>
                         </div>
+
 
                       </div>
                     </div>

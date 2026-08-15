@@ -581,7 +581,7 @@ export function runRiskEngine(
         user_id: '',
         category: 'app_security',
         title: f.title || f.appName,
-        description: f.reason,
+        description: f.reason || (f.reasons ? f.reasons.join(' ') : '') || 'Security risk detected.',
         severity: f.severity,
         source: 'android_native_scan',
         platform,
@@ -625,7 +625,7 @@ export function runRiskEngine(
         user_id: '',
         category: 'network_security',
         title: f.title || f.appName,
-        description: f.reason,
+        description: f.reason || (f.reasons ? f.reasons.join(' ') : '') || 'Security risk detected.',
         severity: f.severity,
         source: 'network_scanner',
         platform,
@@ -650,9 +650,6 @@ export function runRiskEngine(
   return {
     score,
     deviceScore,
-    appScore,
-    privacyScore,
-    networkScore,
     habitsScore: score, // fallback
     grade,
     components,
@@ -730,4 +727,68 @@ export function calculateHabitsScore(answers: import('@/types').CheckupAnswer[])
 
 export function playbookExists(id: string): boolean {
   return PLAYBOOKS.some((p) => p.id === id);
+}
+
+export function generateScoreFromFindings(findings: SecurityFinding[] | import('@/types').ScanFinding[]): RiskEngineResult {
+  const componentEntries = Object.keys(CATEGORY_WEIGHTS) as SecurityCategory[];
+  
+  const components: RiskScoreComponent[] = componentEntries.map((category) => {
+    let score = 100;
+    let confidence: Confidence = 'high';
+    const categoryFindings = findings.filter(f => f.category === category);
+    
+    if (categoryFindings.length > 0) {
+      let maxSeverity: Severity | null = null;
+      for (const f of categoryFindings) {
+        if (maxSeverity === null || severityRank(f.severity) < severityRank(maxSeverity)) {
+          maxSeverity = f.severity;
+        }
+      }
+      
+      if (maxSeverity === 'critical') score = 20;
+      else if (maxSeverity === 'high') score = 50;
+      else if (maxSeverity === 'medium') score = 80;
+      else if (maxSeverity === 'low') score = 90;
+    } else if (category === 'account_security' || category === 'password_hygiene') {
+      // Unscannable purely via device signals, so mark as insufficient data
+      return {
+        category,
+        score: 0,
+        weight: CATEGORY_WEIGHTS[category],
+        insufficientData: true,
+        confidence: 'low',
+        coverage: 0,
+      };
+    }
+    
+    return {
+      category,
+      score,
+      weight: CATEGORY_WEIGHTS[category],
+      insufficientData: false,
+      confidence,
+      coverage: 100,
+    };
+  });
+
+  const supportedComponents = components.filter(c => !c.insufficientData);
+  const totalSupportedWeight = supportedComponents.reduce((sum, c) => sum + c.weight, 0);
+
+  let weighted = 0;
+  for (const c of supportedComponents) {
+    const normalizedWeight = c.weight / totalSupportedWeight;
+    weighted += c.score * normalizedWeight;
+  }
+  
+  const score = totalSupportedWeight > 0 ? Math.round(Math.max(0, Math.min(100, weighted))) : 0;
+
+  return {
+    score,
+    deviceScore: components.find(c => c.category === 'device_security')?.score ?? 0,
+    habitsScore: 0,
+    grade: gradeForScore(score),
+    components,
+    isPreliminary: false,
+    findings: findings as SecurityFinding[],
+  };
 }

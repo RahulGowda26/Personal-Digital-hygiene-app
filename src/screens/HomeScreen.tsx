@@ -13,6 +13,14 @@ import { fetchDashboard, ensureDevice } from '@/services/api';
 import { useAuth } from '@/auth/AuthContext';
 import { CenteredLoader, ErrorState } from '@/components/ui/Spinner';
 import { userFacingError } from '@/lib/errors';
+import { SentinelDeviceScanner } from '@/platform/capacitor/DeviceScannerBridge';
+import { Capacitor } from '@capacitor/core';
+
+interface DeviceInfo {
+  osVersion: string;
+  securityPatch: string;
+  isOutdated: boolean;
+}
 
 function generateTimeline() {
   const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -50,6 +58,7 @@ export function HomeScreen({
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -59,6 +68,23 @@ export function HomeScreen({
       await ensureDevice(user.id, 'web');
       const dashboard = await fetchDashboard(user.id);
       setData(dashboard);
+      
+      if (Capacitor.isNativePlatform()) {
+        const signals = await SentinelDeviceScanner.getDeviceSignals({ sessionId: 'home' });
+        let isOutdated = false;
+        if (signals.securityPatch) {
+          const patchDate = new Date(signals.securityPatch);
+          if (!isNaN(patchDate.getTime())) {
+            const diffDays = (Date.now() - patchDate.getTime()) / (1000 * 60 * 60 * 24);
+            if (diffDays > 180) isOutdated = true;
+          }
+        }
+        setDeviceInfo({
+          osVersion: signals.osVersion,
+          securityPatch: signals.securityPatch,
+          isOutdated
+        });
+      }
     } catch (err) {
       setError(userFacingError(err, 'Failed to load dashboard.'));
     } finally {
@@ -75,14 +101,22 @@ export function HomeScreen({
   if (!data) return null;
 
   const score = data.latestScore?.score ?? 0;
-  const deviceScore = data.latestScore?.deviceScore ?? 0;
-  const appScore = data.latestScore?.appScore ?? 0;
-  const privacyScore = data.latestScore?.privacyScore ?? 0;
+  const deviceScore = data.latestScore?.components?.find(c => c.category === 'device_security')?.score ?? 0;
+  const appScore = data.latestScore?.components?.find(c => c.category === 'app_security')?.score ?? 0;
+  const privacyScore = data.latestScore?.components?.find(c => c.category === 'privacy')?.score ?? 0;
   const hasScanned = score > 0;
+  
+  const getScoreColor = (s: number) => {
+    if (s >= 90) return '#10b981'; // emerald-500
+    if (s >= 75) return '#f59e0b'; // amber-500
+    if (s >= 55) return '#ff6b52'; // coral
+    return '#ef4444'; // red-500
+  };
+  const scoreColorHex = getScoreColor(score);
   
   // Calculate trend
   const trend = hasScanned ? "+5.0 pts" : "Ready";
-  const trendColor = hasScanned ? "text-[#ff6b52]" : "text-slate-400";
+  const trendColor = hasScanned ? `text-[${scoreColorHex}]` : "text-slate-400";
 
   return (
     <div className="pb-24 md:pb-8 text-slate-900 font-sans w-full">
@@ -114,11 +148,12 @@ export function HomeScreen({
                   <div 
                     className={`w-[38px] h-[38px] md:w-11 md:h-11 rounded-full flex items-center justify-center text-sm font-bold shadow-sm transition-all
                       ${item.active 
-                        ? 'bg-[#ff6b52] text-white shadow-[0_4px_14px_rgba(255,107,82,0.3)]' 
+                        ? 'text-white shadow-[0_4px_14px_rgba(0,0,0,0.1)]' 
                         : item.hasData 
                           ? 'bg-[#1c1c1e] text-white' 
                           : 'bg-[#e5e5ea] text-slate-400'
                       }`}
+                    style={item.active ? { backgroundColor: scoreColorHex } : {}}
                   >
                     {item.date}
                   </div>
@@ -135,7 +170,7 @@ export function HomeScreen({
                   {hasScanned && <span className="text-xl md:text-2xl font-bold text-slate-400">/100</span>}
                 </div>
                 <p className="text-sm font-semibold text-slate-500">
-                  {hasScanned ? <span>This week <span className={trendColor}>{trend} ↑</span></span> : <span>Scan pending</span>}
+                  {hasScanned ? <span>This week <span style={{ color: scoreColorHex }}>{trend} ↑</span></span> : <span>Scan pending</span>}
                 </p>
               </div>
               
@@ -146,7 +181,7 @@ export function HomeScreen({
                 <div className="w-[6px] md:w-2 h-[65%] bg-[#f1f1f3] rounded-full"></div>
                 <div className="w-[6px] md:w-2 h-[80%] bg-[#f1f1f3] rounded-full"></div>
                 <div className="w-[6px] md:w-2 h-[75%] bg-[#f1f1f3] rounded-full"></div>
-                <div className="w-[6px] md:w-2 h-[85%] bg-[#ff6b52] rounded-full shadow-[0_0_8px_rgba(255,107,82,0.4)]"></div>
+                <div className="w-[6px] md:w-2 h-[85%] rounded-full shadow-sm" style={{ backgroundColor: scoreColorHex }}></div>
                 <div className="w-[6px] md:w-2 h-[100%] bg-[#f1f1f3] rounded-full"></div>
               </div>
             </div>
@@ -162,9 +197,9 @@ export function HomeScreen({
                 <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest absolute top-6 left-6">Overall</p>
                 
                 <div className="relative mt-6 md:mt-8 flex items-center justify-center">
-                  <svg className="w-28 h-28 md:w-36 md:h-36 transform -rotate-90">
-                    <circle cx="50%" cy="50%" r="40%" stroke="#f1f1f3" strokeWidth="12" fill="transparent" />
-                    <circle cx="50%" cy="50%" r="40%" stroke="#ff6b52" strokeWidth="12" fill="transparent" strokeDasharray={`${(score / 100) * 251} 251`} strokeLinecap="round" className="drop-shadow-sm transition-all duration-1000 ease-out" />
+                  <svg className="w-28 h-28 md:w-36 md:h-36 transform -rotate-90" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="40" stroke="#f1f1f3" strokeWidth="10" fill="transparent" />
+                    <circle cx="50" cy="50" r="40" stroke={scoreColorHex} strokeWidth="10" fill="transparent" strokeDasharray={`${(score / 100) * 251.327} 251.327`} strokeLinecap="round" className="drop-shadow-sm transition-all duration-1000 ease-out" />
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center">
                     <span className="text-2xl md:text-3xl font-black">{score}%</span>
@@ -172,13 +207,26 @@ export function HomeScreen({
                 </div>
 
                 <div className="text-center mt-4">
-                  <span className="text-base font-bold text-[#ff6b52]">{score}</span>
+                  <span className="text-base font-bold" style={{ color: scoreColorHex }}>{score}</span>
                   <span className="text-base font-bold text-slate-400"> / 100 pts</span>
                 </div>
               </div>
 
               {/* Sub-scores */}
               <div className="bg-white rounded-[24px] md:rounded-[32px] p-6 md:p-8 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] flex flex-col justify-center gap-4 flex-1">
+                {deviceInfo && (
+                  <div className="mb-1 p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold text-slate-800">Android {deviceInfo.osVersion}</p>
+                      <p className="text-[10px] text-slate-500">Patch: {deviceInfo.securityPatch}</p>
+                    </div>
+                    {deviceInfo.isOutdated ? (
+                      <span className="text-[10px] font-bold text-red-500 bg-red-50 px-2 py-1 rounded-md">Outdated</span>
+                    ) : (
+                      <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-2 py-1 rounded-md">Up to date</span>
+                    )}
+                  </div>
+                )}
                 <MacroBar label="Device" current={deviceScore} total={100} />
                 <div className="w-full h-px bg-slate-100 my-1"></div>
                 <MacroBar label="Apps" current={appScore} total={100} />

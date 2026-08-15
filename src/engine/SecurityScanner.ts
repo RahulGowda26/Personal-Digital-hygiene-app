@@ -5,7 +5,8 @@ import type {
   PermissionFinding, 
   DeviceIntegrityResult, 
   SecurityConfigurationResult,
-  ScanFinding
+  ScanFinding,
+  AppMetadata
 } from '@/types';
 import { SentinelDeviceScanner } from '@/platform/capacitor/DeviceScannerBridge';
 import { SentinelNetworkScanner } from '@/platform/capacitor/NetworkScannerBridge';
@@ -91,7 +92,7 @@ export class SecurityScanner {
     if (onProgress) {
       onProgress('INSTALLED_APPLICATIONS');
     }
-    let appsData = await this.getInstalledAppsAndPermissions(scanId);
+    let appsData = await this.getInstalledAppsAndPermissions(scanId, onLog);
     if (onLog) onLog(`[OK] Retrieved ${appsData.apps?.length || 0} applications.`);
 
     if (onLog) onLog(`[NETWORK] Scanning active connections...`);
@@ -141,19 +142,26 @@ export class SecurityScanner {
     if (appsData.status !== 'error') {
       if (onLog) onLog(`[EVAL] Executing app risk analyzer against ${appsData.apps.length} apps...`);
       
-      const appFindings = analyzeApps(appsData.apps);
+      const appFindings = analyzeApps(appsData.apps as unknown as AppMetadata[]);
+      
+      // We mutate the global apps array with our analysis so it can be passed to the Inventory
+      (appsData as any).appRiskFindings = appFindings;
+
       for (const f of appFindings) {
-        if (onLog) onLog(`[WARN] Finding generated: ${f.title}`);
-        findings.push({
-          id: `app-${f.packageName}-${scanId}`,
-          category: 'app_security',
-          title: f.title || f.appName || f.packageName,
-          description: f.description || f.reason || 'App Security Risk',
-          severity: f.severity,
-          source: 'android_native_scan',
-          evidence: f.evidence,
-          recommendedPlaybook: f.recommendedPlaybook || 'review_app_permissions'
-        });
+        // ONLY insert actionable risks into the Security Issues table!
+        if (f.riskLevel === 'high' || f.riskLevel === 'medium' || f.riskLevel === 'critical') {
+          if (onLog) onLog(`[WARN] Actionable App Risk Found: ${f.title}`);
+          findings.push({
+            id: `app-${f.packageName}-${scanId}`,
+            category: 'app_security',
+            title: f.title || f.appName || f.packageName,
+            description: f.description || 'Actionable app security risk detected.',
+            severity: f.severity,
+            source: 'ANDROID_PACKAGE_MANAGER',
+            evidence: f.reasons || f.evidence || [],
+            recommendedPlaybook: f.recommendedPlaybook || 'review_app_permissions'
+          });
+        }
       }
     }
 
@@ -179,6 +187,7 @@ export class SecurityScanner {
       deviceIntegrity,
       configuration,
       apps: appsData.apps,
+      appRiskFindings: (appsData as any).appRiskFindings || [],
       permissions: appsData.permissions,
       findings,
       networkDetails: {
@@ -293,12 +302,29 @@ export class SecurityScanner {
         issues.push('Developer mode active');
         if (status === 'safe') status = 'medium';
       }
+      
+      if (signals.securityPatch) {
+        const patchDate = new Date(signals.securityPatch);
+        if (!isNaN(patchDate.getTime())) {
+          const diffDays = (Date.now() - patchDate.getTime()) / (1000 * 60 * 60 * 24);
+          if (diffDays > 365) {
+            issues.push(`Security patch is severely outdated (${signals.securityPatch})`);
+            if (status === 'safe' || status === 'info') status = 'low';
+          } else if (diffDays > 180) {
+            issues.push(`Security patch is older than 6 months (${signals.securityPatch})`);
+            if (status === 'safe') status = 'info';
+          }
+        }
+      }
 
       return {
         status,
         confidence: 'high',
         checksPerformed: ['Root indicators', 'Developer mode', 'Test keys'],
-        issues
+        issues,
+        osVersion: signals.osVersion,
+        sdkInt: signals.sdkInt,
+        securityPatch: signals.securityPatch
       };
     } catch (e) {
       console.error('DeviceIntegrity scan failed', e);
@@ -335,7 +361,7 @@ export class SecurityScanner {
     }
   }
 
-  public async getInstalledAppsAndPermissions(sessionId: string): Promise<{
+  private async getInstalledAppsAndPermissions(sessionId: string, onLog?: (msg: string) => void): Promise<{
     status: 'success' | 'error';
     apps: InstalledAppInfo[];
     permissions: { [packageName: string]: PermissionFinding[] };
@@ -346,8 +372,10 @@ export class SecurityScanner {
       
       if (isElectron && typeof (window as any).electronAPI.scanApps === 'function') {
         nativeResult.apps = await (window as any).electronAPI.scanApps();
+        if (onLog) onLog(`[DEBUG] Electron scanApps returned: ${nativeResult.apps?.length} apps`);
       } else {
         nativeResult = await getInstalledAppsNative(sessionId);
+        if (onLog) onLog(`[DEBUG] Native getInstalledApps returned: ${nativeResult.apps?.length} apps`);
       }
       
       const apps: InstalledAppInfo[] = [];
@@ -368,13 +396,21 @@ export class SecurityScanner {
           installSource: app.installSource,
         });
 
-        const appPerms = app.requestedPermissions || [];
-        const grantedPerms = app.grantedPermissions || [];
-        permissions[app.packageName] = appPerms.map(p => ({
+        const mockGranted = (window as any).mockGrantedPermissions || {};
+        const mockRequested = (window as any).mockRequestedPermissions || {};
+        
+        const grantedList = mockGranted[app.packageName] || app.grantedPermissions || [];
+        app.grantedPermissions = grantedList;
+        
+        const perms = Array.from(new Set([
+          ...grantedList,
+          ...(mockRequested[app.packageName] || app.requestedPermissions || [])
+        ])).map((p: any) => ({
           permission: p,
-          isGranted: grantedPerms.includes(p),
-          description: p
+          isGranted: grantedList.includes(p),
+          description: `Permission: ${p}`
         }));
+        permissions[app.packageName] = perms;
       }
 
       return {
@@ -382,8 +418,9 @@ export class SecurityScanner {
         apps,
         permissions
       };
-    } catch (e) {
-      console.error('InstalledApps scan failed', e);
+    } catch (e: any) {
+      if (onLog) onLog(`[ERROR] getInstalledAppsAndPermissions failed: ${e.message || e}`);
+      console.error('[DEBUG] getInstalledAppsAndPermissions failed:', e);
       return { status: 'error', apps: [], permissions: {} };
     }
   }
@@ -422,8 +459,8 @@ export class SecurityScanner {
         isCaptivePortal: signals.isCaptivePortal,
         ssid: signals.ssid,
         ipAddress: signals.ipAddress,
-        deviceCount: signals.deviceCount,
-        connectedDevices: signals.connectedDevices,
+        deviceCount: (signals as any).deviceCount,
+        connectedDevices: (signals as any).connectedDevices,
         issues 
       };
     } catch (e) {

@@ -11,9 +11,7 @@ console.log = function (...args) {
   if (Capacitor.isNativePlatform()) {
     try {
       const message = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(" ");
-      if (Capacitor.Plugins.Console) {
-        Capacitor.Plugins.Console.log({ message });
-      }
+      // Capacitor.Plugins has been removed in v6, original console.log is captured by Android Studio anyway.
     } catch (e) {
       // Ignore
     }
