@@ -48,10 +48,16 @@ function analyzeUrl(urlStr) {
       reasons.push('Unusually high number of subdomains');
     }
 
+    // Explicit test domain
+    if (domain === 'sentinel-test.com') {
+      riskScore += 100;
+      reasons.push('This is an explicit test domain for Sentinel Web Protection.');
+    }
+
     // 5. Typosquatting / Suspicious Keywords (High Risk)
     // Checking if it contains a keyword but isn't the primary domain
     const suspiciousFound = SUSPICIOUS_KEYWORDS.filter(kw => domain.includes(kw));
-    if (suspiciousFound.length > 0) {
+    if (suspiciousFound.length > 0 && domain !== 'sentinel-test.com') {
       // It's fishy if 'login' is in the domain but it's not a standard major site
       // (This is a simplified heuristic)
       riskScore += 40;
@@ -69,53 +75,22 @@ function analyzeUrl(urlStr) {
   }
 }
 
-// Keep track of tabs we've already blocked to prevent infinite loops
-const blockedTabs = new Set();
-
 chrome.webNavigation.onCommitted.addListener((details) => {
-  // Only check the main frame (top-level window)
-  if (details.frameId !== 0) return;
+  if (details.frameId !== 0) return; // Only main frame
   
   const url = details.url;
   
-  // Don't analyze chrome:// or extension pages
   if (url.startsWith('chrome://') || url.startsWith('chrome-extension://')) return;
 
   const analysis = analyzeUrl(url);
 
-  if (analysis.isRisky && !blockedTabs.has(details.tabId)) {
+  if (analysis.isRisky) {
     console.log(`[Sentinel] Blocked malicious URL: ${url}`, analysis);
-    blockedTabs.add(details.tabId);
 
-    // Send a message to the content script to display the warning
-    chrome.tabs.sendMessage(details.tabId, {
-      type: 'SENTINEL_SHOW_WARNING',
-      payload: {
-        url: url,
-        reasons: analysis.reasons
-      }
-    }).catch(err => {
-      // Content script might not be ready yet, we can execute script directly as fallback
-      chrome.scripting.executeScript({
-        target: { tabId: details.tabId },
-        func: (reasons) => {
-          window.__SENTINEL_WARNING_DATA__ = reasons;
-          document.dispatchEvent(new CustomEvent('sentinel-warning'));
-        },
-        args: [analysis.reasons]
-      });
-    });
-  }
-});
-
-// Clear block status when tab is closed
-chrome.tabs.onRemoved.addListener((tabId) => {
-  blockedTabs.delete(tabId);
-});
-
-// Clear block status when user explicitly navigates away
-chrome.webNavigation.onBeforeNavigate.addListener((details) => {
-  if (details.frameId === 0) {
-    blockedTabs.delete(details.tabId);
+    // Redirect the tab to our local blocked page
+    const blockedUrl = chrome.runtime.getURL(`blocked.html?url=${encodeURIComponent(url)}&reasons=${encodeURIComponent(JSON.stringify(analysis.reasons))}`);
+    
+    chrome.tabs.update(details.tabId, { url: blockedUrl })
+      .catch(e => console.error('[Sentinel] Redirect error:', e));
   }
 });
