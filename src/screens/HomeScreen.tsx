@@ -22,18 +22,24 @@ interface DeviceInfo {
   isOutdated: boolean;
 }
 
-function generateTimeline() {
+function generateTimeline(historicalScores: Array<{ date: string; score: number }> = []) {
   const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
   const today = new Date();
   const timeline = [];
+  
   for (let i = 6; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
+    const dateStr = d.toISOString().split('T')[0];
+    
+    const scoreEntry = historicalScores.find(s => s.date === dateStr);
+    
     timeline.push({
       day: days[d.getDay()],
       date: d.getDate(),
       active: i === 0,
-      hasData: i > 0 && i < 5, // Just some mock data pattern
+      hasData: !!scoreEntry,
+      score: scoreEntry ? scoreEntry.score : 0,
     });
   }
   return timeline;
@@ -100,8 +106,9 @@ export function HomeScreen({
   if (error) return <ErrorState message={error} onRetry={load} />;
   if (!data) return null;
 
-  const score = data.latestScore?.score ?? 0;
   const deviceScore = data.latestScore?.components?.find(c => c.category === 'device_security')?.score ?? 0;
+  // Fall back to 0 if trueDeviceScore is null, otherwise it correctly ignores habit checkup overrides.
+  const score = data.trueDeviceScore ?? 0;
   const appScore = data.latestScore?.components?.find(c => c.category === 'app_security')?.score ?? 0;
   const privacyScore = data.latestScore?.components?.find(c => c.category === 'privacy')?.score ?? 0;
   const hasScanned = score > 0;
@@ -142,7 +149,7 @@ export function HomeScreen({
             
             {/* Timeline Widget */}
             <div className="flex justify-between items-center px-1">
-              {generateTimeline().map((item, idx) => (
+              {generateTimeline(data.historicalScores || []).map((item, idx) => (
                 <div key={idx} className="flex flex-col items-center gap-2">
                   <span className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">{item.day}</span>
                   <div 
@@ -162,7 +169,7 @@ export function HomeScreen({
             </div>
 
             {/* Primary Score */}
-            <div className="flex justify-between items-end bg-white p-6 md:p-8 rounded-[24px] md:rounded-[32px] shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] flex-1">
+            <div className="simple-card p-6 md:p-8 flex justify-between items-end flex-1">
               <div>
                 <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Security Score</p>
                 <div className="flex items-baseline gap-1 mb-2">
@@ -176,13 +183,22 @@ export function HomeScreen({
               
               {/* Mini Bar Chart Mock */}
               <div className="flex items-end gap-2 md:gap-2.5 h-20 md:h-24 pb-1">
-                <div className="w-[6px] md:w-2 h-[60%] bg-[#f1f1f3] rounded-full"></div>
-                <div className="w-[6px] md:w-2 h-[70%] bg-[#f1f1f3] rounded-full"></div>
-                <div className="w-[6px] md:w-2 h-[65%] bg-[#f1f1f3] rounded-full"></div>
-                <div className="w-[6px] md:w-2 h-[80%] bg-[#f1f1f3] rounded-full"></div>
-                <div className="w-[6px] md:w-2 h-[75%] bg-[#f1f1f3] rounded-full"></div>
-                <div className="w-[6px] md:w-2 h-[85%] rounded-full shadow-sm" style={{ backgroundColor: scoreColorHex }}></div>
-                <div className="w-[6px] md:w-2 h-[100%] bg-[#f1f1f3] rounded-full"></div>
+                {generateTimeline(data.historicalScores || []).map((item, idx) => (
+                  <div 
+                    key={idx}
+                    className={`w-[6px] md:w-2 rounded-full transition-all duration-1000 ${
+                      item.active 
+                        ? '' // we'll use inline style for active color
+                        : item.hasData 
+                          ? 'bg-slate-300' 
+                          : 'bg-[#f1f1f3]'
+                    }`}
+                    style={{ 
+                      height: item.hasData ? `${Math.max(10, item.score)}%` : '10%',
+                      ...(item.active ? { backgroundColor: scoreColorHex } : {})
+                    }}
+                  />
+                ))}
               </div>
             </div>
 
@@ -193,8 +209,8 @@ export function HomeScreen({
             <div className="grid grid-cols-2 lg:grid-cols-1 gap-6 md:gap-8 h-full">
               
               {/* Overall Protection Ring */}
-              <div className="bg-white rounded-[24px] md:rounded-[32px] p-6 md:p-8 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] flex flex-col items-center justify-between relative flex-1">
-                <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest absolute top-6 left-6">Overall</p>
+              <div className="simple-card p-6 md:p-8 flex flex-col items-center justify-between relative flex-1">
+                <p className="text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest absolute top-6 left-6">Overall</p>
                 
                 <div className="relative mt-6 md:mt-8 flex items-center justify-center">
                   <svg className="w-28 h-28 md:w-36 md:h-36 transform -rotate-90" viewBox="0 0 100 100">
@@ -213,7 +229,7 @@ export function HomeScreen({
               </div>
 
               {/* Sub-scores */}
-              <div className="bg-white rounded-[24px] md:rounded-[32px] p-6 md:p-8 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] flex flex-col justify-center gap-4 flex-1">
+              <div className="simple-card p-6 md:p-8 flex flex-col justify-center gap-4 flex-1">
                 {deviceInfo && (
                   <div className="mb-1 p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
                     <div>
@@ -241,7 +257,7 @@ export function HomeScreen({
           <div className="lg:col-span-3 flex flex-col gap-6 md:gap-8">
             <div className="grid grid-cols-2 lg:grid-cols-1 gap-6 md:gap-8 h-full">
               
-              <div className="bg-white rounded-[24px] md:rounded-[32px] p-6 md:p-8 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] flex flex-col justify-between flex-1 min-h-[160px]">
+              <div className="simple-card p-6 md:p-8 flex flex-col justify-between flex-1 min-h-[160px]">
                 <div>
                   <div className="flex items-center gap-3 mb-2">
                     <Smartphone size={20} className="text-slate-900" />
@@ -251,13 +267,13 @@ export function HomeScreen({
                 </div>
                 <button 
                   onClick={onRunCheckup}
-                  className="mt-6 w-full bg-[#1c1c1e] text-white rounded-full py-3.5 md:py-4 text-sm font-bold tracking-wide hover:bg-black transition-colors flex items-center justify-center gap-2"
+                  className="mt-6 w-full simple-button py-3 text-sm flex items-center justify-center gap-2"
                 >
                   Start Scan
                 </button>
               </div>
 
-              <div className="bg-white rounded-[24px] md:rounded-[32px] p-6 md:p-8 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] flex flex-col justify-between flex-1 min-h-[160px]">
+              <div className="simple-card p-6 md:p-8 flex flex-col justify-between flex-1 min-h-[160px]">
                 <div>
                   <div className="flex items-center gap-3 mb-2">
                     <ShieldCheck size={20} className="text-[#ff6b52]" />
@@ -267,7 +283,7 @@ export function HomeScreen({
                 </div>
                 <button 
                   onClick={onRunHabitsCheckup}
-                  className="mt-6 w-full bg-[#ff6b52] text-white rounded-full py-3.5 md:py-4 text-sm font-bold tracking-wide hover:bg-[#e85c45] transition-colors flex items-center justify-center gap-2"
+                  className="mt-6 w-full simple-button py-3 text-sm flex items-center justify-center gap-2"
                 >
                   Answer Questions
                 </button>
@@ -280,30 +296,21 @@ export function HomeScreen({
 
         {/* Educational Info Row */}
         <div className="mt-6 md:mt-8 grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-          <div className="bg-slate-900 rounded-[24px] p-6 md:p-8 text-white relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-6 opacity-10">
-              <AppWindow size={80} />
-            </div>
-            <h3 className="text-lg font-bold mb-3 relative z-10">Why Device Hygiene Matters</h3>
-            <p className="text-sm text-slate-300 leading-relaxed relative z-10">
+          <div className="simple-card p-6 md:p-8">
+            <h3 className="text-base font-semibold mb-2 text-slate-900">Why Device Hygiene Matters</h3>
+            <p className="text-sm text-slate-600 leading-relaxed">
               Even with strong passwords, outdated software or rogue permissions can give attackers a backdoor into your digital life. Regular automated scanning prevents silent compromises.
             </p>
           </div>
-          <div className="bg-white border border-slate-100 rounded-[24px] p-6 md:p-8 shadow-sm">
-            <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 mb-4">
-              <EyeOff size={20} />
-            </div>
-            <h3 className="text-lg font-bold mb-3 text-slate-900">The Human Element</h3>
-            <p className="text-sm text-slate-500 leading-relaxed">
+          <div className="simple-card p-6 md:p-8">
+            <h3 className="text-base font-semibold mb-2 text-slate-900">The Human Element</h3>
+            <p className="text-sm text-slate-600 leading-relaxed">
               Cybersecurity isn't just about software; it's about habits. Clicking unknown links, reusing passwords, and over-sharing online are the leading causes of modern identity theft.
             </p>
           </div>
-          <div className="bg-white border border-slate-100 rounded-[24px] p-6 md:p-8 shadow-sm">
-            <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500 mb-4">
-              <Globe size={20} />
-            </div>
-            <h3 className="text-lg font-bold mb-3 text-slate-900">Network Safety</h3>
-            <p className="text-sm text-slate-500 leading-relaxed">
+          <div className="simple-card p-6 md:p-8">
+            <h3 className="text-base font-semibold mb-2 text-slate-900">Network Safety</h3>
+            <p className="text-sm text-slate-600 leading-relaxed">
               Connecting to public Wi-Fi without proper encryption exposes your traffic. Always ensure you are on a trusted network or use a reputable VPN when traveling.
             </p>
           </div>

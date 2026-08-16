@@ -5,6 +5,8 @@ import {
   CheckCircle2,
   Inbox,
   RefreshCw,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import type { SecurityFinding, Severity } from '@/types';
 import { fetchFindings } from '@/services/api';
@@ -170,87 +172,107 @@ function IssueCard({
   onOpenPlaybook: (id: string) => void;
   onResolve: () => void;
 }) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const c = severityColors[finding.severity];
   const isResolved = finding.status === 'resolved';
 
   return (
-    <Card className={`border-l-8 ${c.border} shadow-sm`} padding="lg">
-      <div className="flex flex-col gap-5">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+    <Card className={`border-l-8 ${c.border} shadow-sm overflow-hidden`} padding="none">
+      <div 
+        className="p-5 md:p-6 cursor-pointer hover:bg-slate-50 transition-colors flex items-center justify-between"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-3">
             <AlertTriangle className={c.text} size={24} />
-            {finding.title}
-          </h3>
-          {isResolved && (
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-sm font-bold">
-              <CheckCircle2 size={16} />
-              Fixed
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-bold text-slate-500 uppercase tracking-wide">Risk Level:</span>
-          <SeverityBadge severity={finding.severity} />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-bold text-slate-500 uppercase tracking-wide">Detected:</span>
-          <span className="text-sm font-bold text-slate-900">{formatRelativeTime(finding.detected_at)}</span>
-        </div>
-
-        <div className="bg-slate-50 p-4 rounded-xl space-y-4">
-          <div>
-            <h4 className="text-base font-bold text-slate-900 mb-2">Why we detected this:</h4>
-            {finding.evidence && finding.evidence.length > 0 ? (
-              <div className="space-y-1">
-                {finding.evidence.map((ev, i) => (
-                  <p key={i} className="text-sm text-slate-700 font-medium">{ev}</p>
-                ))}
+            <h3 className="text-lg md:text-xl font-bold text-slate-900 leading-tight">
+              {finding.title}
+            </h3>
+            {isResolved && (
+              <div className="hidden md:flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-sm font-bold ml-2">
+                <CheckCircle2 size={16} />
+                Fixed
               </div>
-            ) : (
-              <p className="text-sm text-slate-700">We found an unexpected security risk in this app.</p>
             )}
           </div>
-
-          <div>
-            <h4 className="text-base font-bold text-slate-900 mb-1">Why this matters:</h4>
-            <p className="text-sm text-slate-700 leading-relaxed">
-              {finding.description}
-            </p>
-          </div>
-        </div>
-
-        {!isResolved && (
-          <div className="bg-white border border-slate-200 rounded-xl p-4">
-            <h4 className="text-base font-bold text-slate-900 mb-3">What you can do:</h4>
-            <ol className="list-decimal list-inside space-y-2 text-sm text-slate-700 mb-5 font-medium">
-              <li>Review the permissions requested by this app</li>
-              <li>Remove access to things it doesn't need</li>
-              <li>Uninstall the app if you don't trust it</li>
-            </ol>
-            
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button
-                variant="primary"
-                className="flex-1 text-base py-3"
-                onClick={() => onOpenPlaybook(finding.id)}
-              >
-                Open Settings
-                <ChevronRight size={18} />
-              </Button>
-              <Button
-                variant="outline"
-                className="flex-1 text-base py-3 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-                onClick={onResolve}
-              >
-                <CheckCircle2 size={18} className="mr-2" />
-                Mark as Fixed
-              </Button>
+          <div className="flex items-center gap-4 ml-9">
+            <div className="flex items-center gap-2">
+              <SeverityBadge severity={finding.severity} />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Detected:</span>
+              <span className="text-xs font-bold text-slate-900">{formatRelativeTime(finding.detected_at)}</span>
             </div>
           </div>
-        )}
+        </div>
+        <div className="flex items-center justify-center p-2 rounded-full bg-slate-100 text-slate-500">
+          {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+        </div>
       </div>
+
+      {isExpanded && (
+        <div className="p-5 md:p-6 pt-0 border-t border-slate-100">
+          <div className="flex flex-col gap-5 mt-5">
+            <div className="bg-slate-50 p-4 rounded-xl space-y-4">
+              <div>
+                <h4 className="text-base font-bold text-slate-900 mb-2">Why we detected this:</h4>
+                {finding.evidence && finding.evidence.length > 0 ? (
+                  <div className="space-y-1">
+                    {finding.evidence.map((ev, i) => (
+                      <p key={i} className="text-sm text-slate-700 font-medium">{ev}</p>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-700">We found an unexpected security risk in this app.</p>
+                )}
+              </div>
+
+              <div>
+                <h4 className="text-base font-bold text-slate-900 mb-1">Why this matters:</h4>
+                <p className="text-sm text-slate-700 leading-relaxed">
+                  {finding.description}
+                </p>
+              </div>
+            </div>
+
+            {!isResolved && (
+              <div className="bg-white border border-slate-200 rounded-xl p-4">
+                <h4 className="text-base font-bold text-slate-900 mb-3">What you can do:</h4>
+                <ol className="list-decimal list-inside space-y-2 text-sm text-slate-700 mb-5 font-medium">
+                  <li>Review the permissions requested by this app</li>
+                  <li>Remove access to things it doesn't need</li>
+                  <li>Uninstall the app if you don't trust it</li>
+                </ol>
+                
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button
+                    variant="primary"
+                    className="flex-1 text-base py-3"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenPlaybook(finding.id);
+                    }}
+                  >
+                    Open Settings
+                    <ChevronRight size={18} />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 text-base py-3 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onResolve();
+                    }}
+                  >
+                    <CheckCircle2 size={18} className="mr-2" />
+                    Mark as Fixed
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </Card>
   );
 }

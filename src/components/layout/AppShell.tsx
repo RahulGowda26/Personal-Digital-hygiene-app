@@ -39,14 +39,14 @@ export function AppShell({ activeTab, onTabChange, children }: AppShellProps) {
   const { user, signOut } = useAuth();
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] text-slate-900">
+    <div className="min-h-screen bg-slate-50 text-slate-900 selection:bg-slate-900 selection:text-white">
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex fixed inset-y-0 left-0 w-60 flex-col border-r border-slate-200 bg-white">
-        <div className="flex items-center gap-2.5 px-5 h-16 border-b border-slate-100">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-white">
-            <ShieldCheck size={20} />
+      <aside className="hidden md:flex fixed inset-y-0 left-0 w-64 flex-col border-r border-slate-200 bg-white">
+        <div className="flex items-center gap-3 px-6 h-16 border-b border-slate-200">
+          <div className="flex h-8 w-8 items-center justify-center rounded bg-slate-900 text-white">
+            <ShieldCheck size={18} />
           </div>
-          <span className="font-semibold text-slate-900 text-[15px]">
+          <span className="font-semibold text-slate-900 text-lg">
             Sentinel
           </span>
         </div>
@@ -60,20 +60,20 @@ export function AppShell({ activeTab, onTabChange, children }: AppShellProps) {
             />
           ))}
         </nav>
-        <div className="border-t border-slate-100 p-3">
+        <div className="border-t border-slate-200 p-4">
           <div className="flex items-center gap-3 px-2 py-2">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-700">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-slate-200 text-sm font-semibold text-slate-700">
               {(user?.email ?? '?').charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-slate-700">
+              <p className="truncate text-sm font-medium text-slate-900">
                 {user?.email}
               </p>
             </div>
           </div>
           <button
             onClick={() => signOut()}
-            className="mt-2 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+            className="mt-2 flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
           >
             <LogOut size={16} />
             Sign out
@@ -99,26 +99,24 @@ export function AppShell({ activeTab, onTabChange, children }: AppShellProps) {
       </header>
 
       {/* Main content */}
-      <main className="md:pl-60 pb-20 md:pb-0">
+      <main className="md:pl-64 pb-20 md:pb-0 min-h-screen flex flex-col">
         {/* Desktop top bar (Settings only) */}
-        <header className="hidden md:flex h-16 items-center justify-between px-8">
-          <div>
-          </div>
+        <header className="hidden md:flex h-16 items-center justify-end px-8 shrink-0 bg-white border-b border-slate-200">
           <button
             onClick={() => onTabChange('settings')}
-            className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+            className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
               activeTab === 'settings'
                 ? 'bg-slate-100 text-slate-900'
-                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
             }`}
             aria-label="Settings"
           >
-            <Settings size={20} />
+            <Settings size={16} className="text-slate-500" />
             Settings
           </button>
         </header>
 
-        <div className="mx-auto w-full max-w-7xl px-4 md:px-8 md:py-8">
+        <div className="mx-auto w-full max-w-5xl px-4 md:px-8 py-8 flex-1">
           {children}
         </div>
       </main>
@@ -154,17 +152,18 @@ function DesktopNavItem({
   return (
     <button
       onClick={onClick}
-      className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
+      className={`group flex w-full items-center gap-3 px-3 py-2 rounded-md transition-colors ${
         active 
-          ? 'bg-[#1c1c1e] text-white' 
-          : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+          ? 'bg-slate-100 text-slate-900 font-semibold' 
+          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
       }`}
     >
       <Icon 
-        size={20} 
-        className={active ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'} 
+        size={18} 
+        strokeWidth={active ? 2.5 : 2}
+        className={active ? 'text-slate-900' : 'text-slate-500 group-hover:text-slate-700'} 
       />
-      <span className="font-medium text-[15px]">{item.label}</span>
+      <span className="text-[14px]">{item.label}</span>
     </button>
   );
 }

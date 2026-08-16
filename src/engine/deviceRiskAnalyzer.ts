@@ -117,5 +117,89 @@ export function analyzeDevice(signals: DeviceSecuritySignals): DeviceRiskFinding
     });
   }
 
+  // 8. USB Debugging
+  if (signals.usbDebuggingStatus && signals.usbDebuggingStatus.status === 'UNSUPPORTED') {
+    findings.push({
+      title: 'USB Debugging is enabled',
+      severity: 'low',
+      confidence: signals.usbDebuggingStatus.confidence,
+      reason: 'USB debugging allows external devices to bypass security protocols and issue commands directly to your device.',
+      evidence: [`State: ${signals.usbDebuggingStatus.value}`],
+      recommendedPlaybook: 'disable_developer_mode',
+    });
+  }
+
+  // 9. Play Protect
+  if (signals.playProtectStatus && signals.playProtectStatus.status === 'UNSUPPORTED') {
+    findings.push({
+      title: 'Google Play Protect is disabled',
+      severity: 'high',
+      confidence: signals.playProtectStatus.confidence,
+      reason: 'Play Protect scans your apps for malware. Disabling it leaves your device exposed to harmful applications.',
+      evidence: [`State: ${signals.playProtectStatus.value}`],
+      recommendedPlaybook: 'enable_security_software',
+    });
+  }
+
+  // 10. Unknown Sources
+  if (signals.unknownSourcesStatus && signals.unknownSourcesStatus.status === 'UNSUPPORTED') {
+    findings.push({
+      title: 'Unknown app sources are permitted',
+      severity: 'medium',
+      confidence: signals.unknownSourcesStatus.confidence,
+      reason: 'Allowing app installations from unknown sources increases the risk of installing malicious software outside the official store.',
+      evidence: [`State: ${signals.unknownSourcesStatus.value}`],
+      recommendedPlaybook: 'disable_unknown_sources',
+    });
+  }
+
+  // 11. Accessibility Services
+  if (signals.accessibilityServicesStatus && signals.accessibilityServicesStatus.status === 'UNKNOWN') {
+    findings.push({
+      title: 'High-risk accessibility services enabled',
+      severity: 'medium',
+      confidence: signals.accessibilityServicesStatus.confidence,
+      reason: 'Accessibility services can read your screen and simulate touches. Malicious apps abuse this to steal passwords and bypass 2FA.',
+      evidence: [`Detected: ${signals.accessibilityServicesStatus.value}`],
+      recommendedPlaybook: 'review_accessibility',
+    });
+  }
+
+  // 12. Device Admins
+  if (signals.deviceAdminsStatus && signals.deviceAdminsStatus.status === 'UNKNOWN') {
+    findings.push({
+      title: 'Third-party device administrators detected',
+      severity: 'medium',
+      confidence: signals.deviceAdminsStatus.confidence,
+      reason: 'Device administrators have elevated privileges, such as the ability to wipe your device or lock your screen.',
+      evidence: [`Detected: ${signals.deviceAdminsStatus.value}`],
+      recommendedPlaybook: 'review_device_admins',
+    });
+  }
+
+  // 13. CA Certificates
+  if (signals.caCertificatesStatus && signals.caCertificatesStatus.status === 'UNKNOWN') {
+    findings.push({
+      title: 'Custom security certificates installed',
+      severity: 'high',
+      confidence: signals.caCertificatesStatus.confidence,
+      reason: 'Custom Root CA certificates can intercept and decrypt your secure network traffic (Man-in-the-Middle attacks).',
+      evidence: [`Detected: ${signals.caCertificatesStatus.value}`],
+      recommendedPlaybook: 'review_certificates',
+    });
+  }
+
+  // 14. Bootloader
+  if (signals.bootloaderStatus && signals.bootloaderStatus.status === 'UNSUPPORTED') {
+    findings.push({
+      title: 'Device bootloader is unlocked',
+      severity: 'critical',
+      confidence: signals.bootloaderStatus.confidence,
+      reason: 'An unlocked bootloader breaks the chain of trust, allowing modified, potentially malicious system software to be installed.',
+      evidence: [`State: ${signals.bootloaderStatus.value}`],
+      recommendedPlaybook: 'review_root_status',
+    });
+  }
+
   return findings;
 }

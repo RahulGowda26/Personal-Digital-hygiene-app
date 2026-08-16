@@ -8,6 +8,7 @@ import {
   Smartphone,
   Wifi,
   AlertTriangle,
+  ChevronDown,
 } from 'lucide-react';
 import type { 
   CheckupAnswer, 
@@ -409,67 +410,44 @@ export function SecurityHabitsScreen({
 
   if (phase === 'complete' && result) {
     return (
-      <div className="max-w-3xl mx-auto space-y-6">
+      <div className="max-w-2xl mx-auto space-y-6 pb-24">
         <div className="flex flex-col items-center text-center py-6">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 mb-4">
             <CheckCircle2 size={28} />
           </div>
-          <h2 className="text-xl font-bold text-slate-900">
+          <h2 className="text-2xl font-bold text-slate-900">
             Checkup complete
           </h2>
+          <p className="text-slate-500 mt-2">
+            {result.findingsCount === 0
+              ? 'Great job! No critical issues found.'
+              : `We found ${result.findingsCount} ${result.findingsCount === 1 ? 'issue' : 'issues'} based on your answers.`}
+          </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          <Card className="flex flex-col items-center py-8 justify-center">
-            <ScoreRing
-              score={result.score}
-              grade={result.grade as ScoreGrade}
-              preliminary={result.isPreliminary}
-            />
-            <p className="mt-4 text-sm font-medium text-slate-900">
-              {result.findingsCount === 0
-                ? 'No issues found.'
-                : `${result.findingsCount} ${result.findingsCount === 1 ? 'issue' : 'issues'} found`}
-            </p>
+        {result.findings && result.findings.length > 0 && (
+          <div className="space-y-4">
+            <h3 className="font-bold text-lg text-slate-900 border-b pb-2">Detailed Report</h3>
+            {result.findings.map((finding, idx) => (
+              <HabitFindingCard key={idx} finding={finding} />
+            ))}
+          </div>
+        )}
+
+        {result.findingsCount === 0 && (
+          <Card className="p-8 text-center bg-emerald-50 border-emerald-100">
+            <ShieldCheck className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
+            <h3 className="font-bold text-emerald-900 mb-2">Your Security Habits are Solid!</h3>
+            <p className="text-emerald-700 text-sm">We didn't detect any risky habits based on your answers.</p>
           </Card>
+        )}
 
-          <Card>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-slate-900">Scan Details</h3>
-
-            </div>
-            
-            <div className="space-y-3 text-sm divide-y divide-slate-100">
-              <div className="flex justify-between py-2">
-                <span className="text-slate-600">Account Security</span>
-                <span className="font-medium text-slate-900">1 account checked</span>
-              </div>
-              <div className="flex justify-between py-2">
-                <span className="text-slate-600">Password Hygiene</span>
-                <span className="font-medium text-slate-900">{passwordResult ? '1 checked' : 'Skipped'}</span>
-              </div>
-              <div className="flex justify-between py-2 items-center">
-                <span className="text-slate-600">Application Security</span>
-                <span className="font-medium text-slate-400">Skipped (Manual Only)</span>
-              </div>
-              <div className="flex justify-between py-2 items-center">
-                <span className="text-slate-600">Device Security</span>
-                <span className="font-medium text-slate-400">Skipped (Manual Only)</span>
-              </div>
-              <div className="flex justify-between py-2 items-center">
-                <span className="text-slate-600">Network Security</span>
-                <span className="font-medium text-slate-400">Skipped (Manual Only)</span>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        <div className="flex gap-3 justify-end">
-          <Button variant="outline" onClick={onBackHome}>
-            Home
+        <div className="flex gap-3 justify-center pt-6">
+          <Button variant="outline" onClick={onBackHome} className="w-full sm:w-auto">
+            Back to Home
           </Button>
-          <Button onClick={() => onComplete(checkupId!)}>
-            View Findings
+          <Button onClick={() => onComplete(checkupId!)} className="w-full sm:w-auto">
+            View All Findings
             <ChevronRight size={16} />
           </Button>
         </div>
@@ -478,4 +456,55 @@ export function SecurityHabitsScreen({
   }
 
   return null;
+}
+
+function HabitFindingCard({ finding }: { finding: any }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const borderColor = finding.severity === 'critical' ? '#ef4444' : finding.severity === 'high' ? '#f97316' : '#f59e0b';
+  const iconColor = finding.severity === 'critical' ? 'text-red-500' : finding.severity === 'high' ? 'text-orange-500' : 'text-amber-500';
+
+  return (
+    <Card className="border-l-4 overflow-hidden" style={{ borderLeftColor: borderColor }} padding="none">
+      <div 
+        className="p-5 cursor-pointer hover:bg-slate-50 transition-colors flex items-center justify-between"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center gap-3">
+          <AlertTriangle className={`w-5 h-5 shrink-0 ${iconColor}`} />
+          <h4 className="font-bold text-slate-900">{finding.title}</h4>
+        </div>
+        <div className="flex items-center justify-center p-2 rounded-full bg-slate-100 text-slate-500 ml-4">
+          {isExpanded ? <ChevronDown size={20} className="rotate-180" /> : <ChevronDown size={20} />}
+        </div>
+      </div>
+
+      {isExpanded && (
+        <div className="p-5 pt-0 border-t border-slate-100 mt-2">
+          <div className="flex-1 mt-4">
+            <p className="text-sm text-slate-600 mb-3">{finding.description || finding.reason}</p>
+            
+            {finding.evidence && finding.evidence.length > 0 && (
+              <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 mb-3">
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 block">Your Answer / Evidence</span>
+                <ul className="list-disc pl-4 space-y-1">
+                  {finding.evidence.map((ev: string, i: number) => (
+                    <li key={i} className="text-sm text-slate-700">{ev}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {finding.recommendedPlaybook && (
+              <div className="mt-4 pt-3 border-t border-slate-100">
+                <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider mb-1 block">Solution</span>
+                <p className="text-sm font-medium text-slate-800">
+                  {finding.recommendedPlaybook.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </Card>
+  );
 }

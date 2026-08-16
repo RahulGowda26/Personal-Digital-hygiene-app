@@ -5,12 +5,16 @@ import android.app.admin.DevicePolicyManager
 import android.content.Context
 import android.os.Build
 import android.provider.Settings
+import com.getcapacitor.JSArray
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
 import java.io.File
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import java.security.KeyStore
 
 @CapacitorPlugin(name = "SentinelDeviceScanner")
 class DeviceScannerPlugin : Plugin() {
@@ -70,6 +74,62 @@ class DeviceScannerPlugin : Plugin() {
             val hasSu = checkSuExists()
             val isRooted = isTestKeys || hasSu
 
+            // USB Debugging
+            val isUsbDebuggingEnabled = Settings.Global.getInt(
+                context.contentResolver, 
+                Settings.Global.ADB_ENABLED, 
+                0
+            ) == 1
+
+            // Play Protect (Package Verifier)
+            val isPlayProtectEnabled = Settings.Global.getInt(
+                context.contentResolver, 
+                "package_verifier_enable", 
+                1
+            ) == 1
+
+            // Accessibility Services
+            val accessibilityServicesString = Settings.Secure.getString(
+                context.contentResolver, 
+                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+            ) ?: ""
+            val accessibilityServices = JSArray()
+            accessibilityServicesString.split(":").forEach { 
+                if (it.isNotBlank()) accessibilityServices.put(it) 
+            }
+
+            // Device Admins
+            val deviceAdmins = JSArray()
+            devicePolicyManager.activeAdmins?.forEach { admin ->
+                deviceAdmins.put(admin.packageName)
+            }
+
+            // VPN Status
+            val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            val activeNetwork = connectivityManager.activeNetwork
+            val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
+            val isVpnActive = capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
+
+            // User Certificates
+            val userCerts = JSArray()
+            try {
+                val ks = KeyStore.getInstance("AndroidCAStore")
+                ks.load(null, null)
+                val aliases = ks.aliases()
+                while (aliases.hasMoreElements()) {
+                    val alias = aliases.nextElement()
+                    if (alias.startsWith("user:")) {
+                        userCerts.put(alias)
+                    }
+                }
+            } catch (e: Exception) {
+                // Ignore keystore errors for now
+            }
+
+            // Bootloader Status Heuristic
+            val lockedProp = getSystemProperty("ro.boot.flash.locked")
+            val isBootloaderUnlocked = lockedProp == "0"
+
             val ret = JSObject()
             ret.put("osVersion", release)
             ret.put("sdkInt", sdkInt)
@@ -79,6 +139,13 @@ class DeviceScannerPlugin : Plugin() {
             ret.put("unknownSourcesEnabled", unknownSourcesEnabled)
             ret.put("isRooted", isRooted)
             ret.put("isEncrypted", isEncrypted)
+            ret.put("isUsbDebuggingEnabled", isUsbDebuggingEnabled)
+            ret.put("isPlayProtectEnabled", isPlayProtectEnabled)
+            ret.put("enabledAccessibilityServices", accessibilityServices)
+            ret.put("activeDeviceAdmins", deviceAdmins)
+            ret.put("isVpnActive", isVpnActive)
+            ret.put("userCerts", userCerts)
+            ret.put("isBootloaderUnlocked", isBootloaderUnlocked)
 
             android.util.Log.d("SentinelDeviceScanner", "SUCCESS id=$sessionId")
             call.resolve(ret)
@@ -106,5 +173,15 @@ class DeviceScannerPlugin : Plugin() {
             if (File(path).exists()) return true
         }
         return false
+    }
+
+    private fun getSystemProperty(key: String): String? {
+        return try {
+            val clazz = Class.forName("android.os.SystemProperties")
+            val method = clazz.getMethod("get", String::class.java)
+            method.invoke(null, key) as String?
+        } catch (e: Exception) {
+            null
+        }
     }
 }

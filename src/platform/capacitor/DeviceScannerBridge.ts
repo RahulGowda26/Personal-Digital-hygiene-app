@@ -9,6 +9,13 @@ export interface NativeDeviceSignalsResponse {
   unknownSourcesEnabled: boolean;
   isRooted: boolean;
   isEncrypted: boolean;
+  isUsbDebuggingEnabled: boolean;
+  isPlayProtectEnabled: boolean;
+  enabledAccessibilityServices: string[];
+  activeDeviceAdmins: string[];
+  isVpnActive: boolean;
+  userCerts: string[];
+  isBootloaderUnlocked: boolean;
 }
 
 export interface SentinelDeviceScannerPlugin {

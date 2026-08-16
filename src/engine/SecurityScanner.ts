@@ -45,6 +45,10 @@ export class SecurityScanner {
     return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   }
 
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
   /**
    * Orchestrates the complete device scan workflow.
    */
@@ -62,6 +66,7 @@ export class SecurityScanner {
     if (onProgress) {
       onProgress('INITIALIZING');
     }
+    await this.sleep(1000);
 
     if (!this.isNative()) {
       return {
@@ -83,6 +88,7 @@ export class SecurityScanner {
     }
     let deviceIntegrity = await this.getDeviceIntegrity(scanId);
     if (onLog) onLog(`[OK] Device status: ${deviceIntegrity.status}`);
+    await this.sleep(1500);
     
     if (onLog) onLog(`[NATIVE] Requesting security configurations...`);
     let configuration = await this.getSecurityConfiguration(scanId);
@@ -94,6 +100,7 @@ export class SecurityScanner {
     }
     let appsData = await this.getInstalledAppsAndPermissions(scanId, onLog);
     if (onLog) onLog(`[OK] Retrieved ${appsData.apps?.length || 0} applications.`);
+    await this.sleep(2000);
 
     if (onLog) onLog(`[NETWORK] Scanning active connections...`);
     if (onProgress) {
@@ -138,6 +145,7 @@ export class SecurityScanner {
     if (onProgress) {
       onProgress('FINDING_RISKS');
     }
+    await this.sleep(500);
 
     if (appsData.status !== 'error') {
       if (onLog) onLog(`[EVAL] Executing app risk analyzer against ${appsData.apps.length} apps...`);
@@ -172,6 +180,7 @@ export class SecurityScanner {
     if (onProgress) {
       onProgress('CREATING_REPORT');
     }
+    await this.sleep(500);
 
     for (const f of findings) {
       console.log(`[FINDING DEBUG]\nApp=${f.title}\nPackage=${f.id.split('-')[1] || 'N/A'}\nRule=${f.description}\nSeverity=${f.severity}\nEvidence=${f.evidence?.join('; ')}\nSource=${f.source}`);

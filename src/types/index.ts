@@ -228,7 +228,8 @@ export type DeviceSecurityState =
 export type DeviceSecurityCategory = 
   | 'OS_SECURITY' | 'ENCRYPTION' | 'SCREEN_LOCK' | 'SECURE_BOOT' 
   | 'SYSTEM_UPDATES' | 'DEVELOPER_MODE' | 'ROOT_JAILBREAK' 
-  | 'FIREWALL' | 'SECURITY_SOFTWARE';
+  | 'FIREWALL' | 'SECURITY_SOFTWARE' | 'INTEGRITY_CHECK'
+  | 'DEVICE_ADMINS' | 'ACCESSIBILITY_SERVICES' | 'CERTIFICATES';
 
 export interface DeviceSecuritySignal {
   id: string;
@@ -252,6 +253,13 @@ export interface DeviceSecuritySignals {
   firewallStatus: DeviceSecuritySignal;
   antivirusStatus: DeviceSecuritySignal;
   automaticUpdatesStatus: DeviceSecuritySignal;
+  usbDebuggingStatus: DeviceSecuritySignal;
+  playProtectStatus: DeviceSecuritySignal;
+  unknownSourcesStatus: DeviceSecuritySignal;
+  accessibilityServicesStatus: DeviceSecuritySignal;
+  deviceAdminsStatus: DeviceSecuritySignal;
+  caCertificatesStatus: DeviceSecuritySignal;
+  bootloaderStatus: DeviceSecuritySignal;
   visibility: 'SUPPORTED' | 'UNSUPPORTED' | 'LIMITED';
   confidence: Confidence;
 }
@@ -483,6 +491,8 @@ export interface ThreatScene {
 
 export interface DashboardData {
   latestScore: RiskScore | null;
+  trueDeviceScore: number | null;
+  historicalScores: Array<{ date: string; score: number }>;
   findings: SecurityFinding[];
   lastCheckup: CheckupRow | null;
   recentEvents: SecurityEventRow[];

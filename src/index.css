@@ -4,21 +4,31 @@
 
 @layer base {
   body {
-    @apply bg-theme-7 text-white antialiased selection:bg-theme-1 selection:text-white;
+    @apply bg-slate-50 text-slate-900 antialiased selection:bg-blue-500 selection:text-white;
   }
 }
 
 @layer utilities {
-  .glass-card {
-    @apply bg-theme-6/80 backdrop-blur-xl border border-theme-5/30 shadow-lg;
+  .simple-card {
+    @apply bg-white border border-slate-200 rounded-lg shadow-sm;
   }
   
-  .glass-button {
-    @apply bg-theme-1/90 backdrop-blur-md text-white border border-theme-1 shadow-md hover:bg-theme-1 transition-all;
+  .simple-button {
+    @apply bg-slate-900 text-white font-medium hover:bg-slate-800 rounded-md transition-colors;
   }
 }
 
 /* Custom scrollbar for webkit */
 ::-webkit-scrollbar {
   width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent; 
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1; 
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8; 
 }
