@@ -132,13 +132,13 @@ export function HomeScreen({
         {/* Header */}
         <div className="flex justify-between items-center mb-8 md:mb-10">
           <div>
-            <h1 className="text-[28px] md:text-4xl font-bold tracking-tight">Home</h1>
-            <p className="text-sm font-medium text-slate-500 mt-1">
+            <h1 className="font-marker text-[32px] md:text-5xl font-bold tracking-wide">Home</h1>
+            <p className="text-base font-hand font-bold text-slate-500 mt-1">
               {new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date())}
             </p>
           </div>
-          <button className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white flex items-center justify-center shadow-sm border border-slate-100 text-slate-700 hover:bg-slate-50 transition-colors">
-            <Calendar size={20} strokeWidth={2.5} />
+          <button className="w-12 h-12 md:w-14 md:h-14 rounded-full border-2 border-slate-800 bg-yellow-300 flex items-center justify-center text-slate-900 shadow-[2px_2px_0px_0px_rgba(30,41,59,1)] active:translate-y-0.5 active:shadow-[0px_0px_0px_0px_rgba(30,41,59,1)] transition-all">
+            <Calendar size={24} className="stroke-[2.5]" />
           </button>
         </div>
 
@@ -204,138 +204,155 @@ export function HomeScreen({
 
           </div>
 
-          {/* Middle Column (Data Rings & Bars) */}
+            <div className="simple-card p-5 pb-4 bg-white flex flex-col justify-between order-2 lg:order-1">
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h3 className="font-marker font-bold text-slate-900 text-lg mb-1">7-Day Posture</h3>
+                  <p className="text-xs font-hand font-bold text-slate-500 uppercase tracking-wider">Device Score Trend</p>
+                </div>
+                <div className="flex items-center gap-1.5 px-3 py-1 bg-green-100 text-green-800 rounded-full border-2 border-slate-800 shadow-[2px_2px_0px_0px_rgba(22,101,52,1)]">
+                  <TrendingUp size={14} className="stroke-[3]" />
+                  <span className="text-sm font-hand font-bold tracking-wide">Growing</span>
+                </div>
+              </div>
+              
+              <div className="h-40 w-full mb-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={scoreColorHex} stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor={scoreColorHex} stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis 
+                      dataKey="date" 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{fontSize: 12, fill: '#64748b', fontFamily: '"Patrick Hand", cursive'}} 
+                      dy={10}
+                    />
+                    <YAxis 
+                      domain={[0, 100]} 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{fontSize: 12, fill: '#64748b', fontFamily: '"Patrick Hand", cursive'}}
+                      dx={-10}
+                    />
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '12px', border: '2px solid #1e293b', boxShadow: '4px 4px 0px 0px rgba(30,41,59,1)', fontFamily: '"Patrick Hand", cursive', fontWeight: 'bold' }}
+                      itemStyle={{ color: scoreColorHex, fontWeight: 'bold' }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="score" 
+                      stroke={scoreColorHex} 
+                      strokeWidth={3}
+                      fillOpacity={1} 
+                      fill="url(#colorScore)" 
+                      animationDuration={1500}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            {deviceInfo && (
+              <div className="simple-card p-6">
+                <p className="text-xs font-hand font-bold text-slate-500 uppercase tracking-widest mb-2">OS Status</p>
+                <div className="flex items-center justify-between">
+                  <span className="font-marker font-bold">Android {deviceInfo.osVersion}</span>
+                  <span className={`text-xs font-bold px-2 py-1 rounded ${deviceInfo.isOutdated ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                    {deviceInfo.isOutdated ? 'Outdated' : 'Secure'}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="lg:col-span-4 flex flex-col gap-6 md:gap-8">
-            <div className="grid grid-cols-2 lg:grid-cols-1 gap-6 md:gap-8 h-full">
-              
-              {/* Overall Protection Ring */}
-              <div className="simple-card p-6 md:p-8 flex flex-col items-center justify-between relative flex-1">
-                <p className="text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest absolute top-6 left-6">Overall</p>
-                
-                <div className="relative mt-6 md:mt-8 flex items-center justify-center">
-                  <svg className="w-28 h-28 md:w-36 md:h-36 transform -rotate-90" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="40" stroke="#f1f1f3" strokeWidth="10" fill="transparent" />
-                    <circle cx="50" cy="50" r="40" stroke={scoreColorHex} strokeWidth="10" fill="transparent" strokeDasharray={`${(score / 100) * 251.327} 251.327`} strokeLinecap="round" className="drop-shadow-sm transition-all duration-1000 ease-out" />
+            <div className="simple-card overflow-hidden order-1 lg:order-2 flex-1 flex flex-col justify-center relative p-8 md:p-10">
+              <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, black 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
+              <div className="flex flex-col items-center justify-center z-10 w-full h-full">
+                <div className="relative w-48 h-48 md:w-56 md:h-56 lg:w-64 lg:h-64 mb-6">
+                  <svg className="w-full h-full transform -rotate-90 filter drop-shadow-md" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="42" fill="none" stroke="#e2e8f0" strokeWidth="6" strokeLinecap="round" />
+                    <circle cx="50" cy="50" r="42" fill="none" stroke={scoreColorHex} strokeWidth="6" strokeLinecap="round" strokeDasharray={`${hasScanned ? (score / 100) * 264 : 0} 264`} className="transition-all duration-1500 ease-out" />
                   </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-2xl md:text-3xl font-black">{score}%</span>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-[56px] md:text-[64px] lg:text-[72px] font-marker font-bold leading-none tracking-tighter" style={{ color: scoreColorHex }}>
+                      {hasScanned ? score : '--'}
+                    </span>
+                    <span className="text-sm font-hand font-bold text-slate-500 uppercase tracking-widest mt-1">
+                      {hasScanned ? 'Score' : 'Unscanned'}
+                    </span>
                   </div>
                 </div>
-
-                <div className="text-center mt-4">
-                  <span className="text-base font-bold" style={{ color: scoreColorHex }}>{score}</span>
-                  <span className="text-base font-bold text-slate-400"> / 100 pts</span>
+                <div className="text-center w-full mt-4">
+                  <h2 className="text-2xl font-marker font-bold text-slate-900 mb-2">
+                    {hasScanned ? 'Security Score' : 'Action Required'}
+                  </h2>
+                  <p className="text-base font-hand text-slate-600 max-w-sm mx-auto">
+                    {hasScanned ? 'Your device security posture based on recent scans.' : 'Run a checkup to assess your device security posture.'}
+                  </p>
+                  {!hasScanned && (
+                    <button onClick={() => navigate('/issues')} className="simple-button mt-6 w-full max-w-[200px] mx-auto py-3 px-6 flex items-center justify-center gap-2">
+                      <Zap size={20} className="fill-yellow-400 stroke-yellow-400" />
+                      Start Checkup
+                    </button>
+                  )}
                 </div>
               </div>
-
-              {/* Sub-scores */}
-              <div className="simple-card p-6 md:p-8 flex flex-col justify-center gap-4 flex-1">
-                {deviceInfo && (
-                  <div className="mb-1 p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-bold text-slate-800">Android {deviceInfo.osVersion}</p>
-                      <p className="text-[10px] text-slate-500">Patch: {deviceInfo.securityPatch}</p>
-                    </div>
-                    {deviceInfo.isOutdated ? (
-                      <span className="text-[10px] font-bold text-red-500 bg-red-50 px-2 py-1 rounded-md">Outdated</span>
-                    ) : (
-                      <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-2 py-1 rounded-md">Up to date</span>
-                    )}
-                  </div>
-                )}
-                <MacroBar label="Device" current={deviceScore} total={100} />
-                <div className="w-full h-px bg-slate-100 my-1"></div>
-                <MacroBar label="Apps" current={appScore} total={100} />
-                <div className="w-full h-px bg-slate-100 my-1"></div>
-                <MacroBar label="Privacy" current={privacyScore} total={100} />
-              </div>
-
             </div>
           </div>
 
-          {/* Right Column (Action Cards) */}
           <div className="lg:col-span-3 flex flex-col gap-6 md:gap-8">
-            <div className="grid grid-cols-2 lg:grid-cols-1 gap-6 md:gap-8 h-full">
-              
-              <div className="simple-card p-6 md:p-8 flex flex-col justify-between flex-1 min-h-[160px]">
-                <div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <Smartphone size={20} className="text-slate-900" />
-                    <h3 className="text-lg md:text-xl font-black leading-tight text-slate-900">Scan Device</h3>
-                  </div>
-                  <p className="text-xs md:text-sm font-medium text-slate-500 leading-snug mt-2">Run an automated sweep of your device, network, and apps for risks.</p>
+            <div className="simple-card p-6 flex flex-col justify-between flex-1 min-h-[160px]">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <Smartphone size={20} className="text-slate-900" />
+                  <h3 className="text-lg md:text-xl font-black leading-tight text-slate-900">Scan Device</h3>
                 </div>
-                <button 
-                  onClick={onRunCheckup}
-                  className="mt-6 w-full simple-button py-3 text-sm flex items-center justify-center gap-2"
-                >
-                  Start Scan
-                </button>
+                <p className="text-xs md:text-sm font-medium text-slate-500 mt-2">Run an automated sweep of your device, network, and apps.</p>
               </div>
-
-              <div className="simple-card p-6 md:p-8 flex flex-col justify-between flex-1 min-h-[160px]">
-                <div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <ShieldCheck size={20} className="text-[#ff6b52]" />
-                    <h3 className="text-lg md:text-xl font-black leading-tight text-slate-900">Security Habits</h3>
-                  </div>
-                  <p className="text-xs md:text-sm font-medium text-slate-500 leading-snug mt-2">Answer a quick questionnaire to assess your human security vulnerabilities.</p>
+              <button onClick={onRunCheckup} className="mt-6 w-full simple-button py-3 text-sm">Start Scan</button>
+            </div>
+            <div className="simple-card p-6 flex flex-col justify-between flex-1 min-h-[160px]">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <ShieldCheck size={20} className="text-[#ff6b52]" />
+                  <h3 className="text-lg md:text-xl font-black leading-tight text-slate-900">Security Habits</h3>
                 </div>
-                <button 
-                  onClick={onRunHabitsCheckup}
-                  className="mt-6 w-full simple-button py-3 text-sm flex items-center justify-center gap-2"
-                >
-                  Answer Questions
-                </button>
+                <p className="text-xs md:text-sm font-medium text-slate-500 mt-2">Assess your human security vulnerabilities.</p>
               </div>
-
+              <button onClick={onRunHabitsCheckup} className="mt-6 w-full simple-button py-3 text-sm">Answer Questions</button>
             </div>
           </div>
-
         </div>
-
-        {/* Educational Info Row */}
-        <div className="mt-6 md:mt-8 grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-          <div className="simple-card p-6 md:p-8">
-            <h3 className="text-base font-semibold mb-2 text-slate-900">Why Device Hygiene Matters</h3>
-            <p className="text-sm text-slate-600 leading-relaxed">
-              Even with strong passwords, outdated software or rogue permissions can give attackers a backdoor into your digital life. Regular automated scanning prevents silent compromises.
-            </p>
-          </div>
-          <div className="simple-card p-6 md:p-8">
-            <h3 className="text-base font-semibold mb-2 text-slate-900">The Human Element</h3>
-            <p className="text-sm text-slate-600 leading-relaxed">
-              Cybersecurity isn't just about software; it's about habits. Clicking unknown links, reusing passwords, and over-sharing online are the leading causes of modern identity theft.
-            </p>
-          </div>
-          <div className="simple-card p-6 md:p-8">
-            <h3 className="text-base font-semibold mb-2 text-slate-900">Network Safety</h3>
-            <p className="text-sm text-slate-600 leading-relaxed">
-              Connecting to public Wi-Fi without proper encryption exposes your traffic. Always ensure you are on a trusted network or use a reputable VPN when traveling.
-            </p>
-          </div>
-        </div>
-
       </div>
     </div>
   );
 }
 
-function MacroBar({ label, current, total }: { label: string, current: number, total: number }) {
-  const percentage = Math.round((current / total) * 100);
+function ScoreBar({ label, score }: { label: string; score: number }) {
+  const getScoreColor = (s: number) => {
+    if (s >= 90) return 'bg-emerald-500';
+    if (s >= 75) return 'bg-amber-500';
+    if (s >= 55) return 'bg-orange-500';
+    return 'bg-red-500';
+  };
+  const colorClass = getScoreColor(score);
   return (
-    <div className="flex flex-col gap-1.5 w-full">
-      <div className="flex justify-between items-center w-full">
-        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{label}</span>
-        <div className="text-[10px] font-bold text-slate-700">
-          {current} <span className="text-slate-400">/ {total}</span>
-        </div>
+    <div>
+      <div className="flex justify-between text-base font-hand font-bold mb-2">
+        <span className="text-slate-700">{label}</span>
+        <span className="text-slate-900">{score > 0 ? `${score}/100` : '--/100'}</span>
       </div>
-      <div className="w-full h-1.5 bg-[#f1f1f3] rounded-full overflow-hidden">
+      <div className="h-3 w-full bg-slate-200 rounded-full overflow-hidden border-2 border-slate-800 shadow-[inset_2px_2px_0px_0px_rgba(0,0,0,0.1)]">
         <div 
-          className="h-full bg-slate-800 rounded-full transition-all duration-500" 
-          style={{ width: `${percentage}%` }}
-        ></div>
+          className={`h-full ${colorClass} transition-all duration-1000 ease-out rounded-full border-r-2 border-slate-800`}
+          style={{ width: `${score}%` }}
+        />
       </div>
     </div>
   );

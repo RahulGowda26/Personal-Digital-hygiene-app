@@ -4,17 +4,21 @@
 
 @layer base {
   body {
-    @apply bg-slate-50 text-slate-900 antialiased selection:bg-blue-500 selection:text-white;
+    @apply bg-paper-50 text-slate-900 antialiased selection:bg-slate-900 selection:text-white font-sans;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-marker tracking-wide;
   }
 }
 
 @layer utilities {
   .simple-card {
-    @apply bg-white border border-slate-200 rounded-lg shadow-sm;
+    @apply bg-white border-2 border-slate-800 rounded-xl shadow-[4px_4px_0px_0px_rgba(30,41,59,1)];
   }
   
   .simple-button {
-    @apply bg-slate-900 text-white font-medium hover:bg-slate-800 rounded-md transition-colors;
+    @apply bg-slate-900 text-white font-hand text-xl hover:bg-slate-800 rounded-lg transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)];
   }
 }
 

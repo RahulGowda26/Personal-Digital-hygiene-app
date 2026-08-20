@@ -464,40 +464,40 @@ function HabitFindingCard({ finding }: { finding: any }) {
   const iconColor = finding.severity === 'critical' ? 'text-red-500' : finding.severity === 'high' ? 'text-orange-500' : 'text-amber-500';
 
   return (
-    <Card className="border-l-4 overflow-hidden" style={{ borderLeftColor: borderColor }} padding="none">
+    <Card className="border-l-4 overflow-hidden border-2 border-slate-800 shadow-[4px_4px_0px_0px_rgba(30,41,59,1)]" style={{ borderLeftColor: borderColor }} padding="none">
       <div 
-        className="p-5 cursor-pointer hover:bg-slate-50 transition-colors flex items-center justify-between"
+        className="p-5 cursor-pointer hover:bg-paper-100 transition-colors flex items-center justify-between"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-3">
           <AlertTriangle className={`w-5 h-5 shrink-0 ${iconColor}`} />
-          <h4 className="font-bold text-slate-900">{finding.title}</h4>
+          <h4 className="font-marker font-bold text-slate-900 text-lg tracking-wide">{finding.title}</h4>
         </div>
-        <div className="flex items-center justify-center p-2 rounded-full bg-slate-100 text-slate-500 ml-4">
-          {isExpanded ? <ChevronDown size={20} className="rotate-180" /> : <ChevronDown size={20} />}
+        <div className="flex items-center justify-center p-2 rounded-full bg-paper-200 border-2 border-slate-800 text-slate-700 ml-4 shadow-[2px_2px_0px_0px_rgba(30,41,59,1)]">
+          {isExpanded ? <ChevronDown size={20} className="rotate-180 stroke-[3]" /> : <ChevronDown size={20} className="stroke-[3]" />}
         </div>
       </div>
 
       {isExpanded && (
-        <div className="p-5 pt-0 border-t border-slate-100 mt-2">
+        <div className="p-5 pt-0 border-t-2 border-slate-800 bg-paper-50 mt-2">
           <div className="flex-1 mt-4">
-            <p className="text-sm text-slate-600 mb-3">{finding.description || finding.reason}</p>
+            <p className="text-base font-hand text-slate-800 mb-3">{finding.description || finding.reason}</p>
             
             {finding.evidence && finding.evidence.length > 0 && (
-              <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 mb-3">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 block">Your Answer / Evidence</span>
+              <div className="bg-paper-100 p-3 rounded-xl border-2 border-slate-800 mb-3 shadow-[inset_2px_2px_0px_0px_rgba(0,0,0,0.05)]">
+                <span className="text-xs font-hand font-bold text-slate-500 uppercase tracking-widest mb-1 block">Your Answer / Evidence</span>
                 <ul className="list-disc pl-4 space-y-1">
                   {finding.evidence.map((ev: string, i: number) => (
-                    <li key={i} className="text-sm text-slate-700">{ev}</li>
+                    <li key={i} className="text-base font-hand text-slate-800">{ev}</li>
                   ))}
                 </ul>
               </div>
             )}
 
             {finding.recommendedPlaybook && (
-              <div className="mt-4 pt-3 border-t border-slate-100">
-                <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider mb-1 block">Solution</span>
-                <p className="text-sm font-medium text-slate-800">
+              <div className="mt-4 pt-3 border-t-2 border-slate-800">
+                <span className="text-xs font-hand font-bold text-emerald-600 uppercase tracking-widest mb-1 block">Solution</span>
+                <p className="text-base font-hand font-bold text-slate-900">
                   {finding.recommendedPlaybook.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                 </p>
               </div>

@@ -177,19 +177,19 @@ function IssueCard({
   const isResolved = finding.status === 'resolved';
 
   return (
-    <Card className={`border-l-8 ${c.border} shadow-sm overflow-hidden`} padding="none">
+    <Card className={`border-l-8 ${c.border} shadow-[4px_4px_0px_0px_rgba(30,41,59,1)] overflow-hidden border-2 border-slate-800`} padding="none">
       <div 
-        className="p-5 md:p-6 cursor-pointer hover:bg-slate-50 transition-colors flex items-center justify-between"
+        className="p-5 md:p-6 cursor-pointer hover:bg-paper-100 transition-colors flex items-center justify-between"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-3">
             <AlertTriangle className={c.text} size={24} />
-            <h3 className="text-lg md:text-xl font-bold text-slate-900 leading-tight">
+            <h3 className="text-xl md:text-2xl font-marker font-bold text-slate-900 leading-tight tracking-wide">
               {finding.title}
             </h3>
             {isResolved && (
-              <div className="hidden md:flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-sm font-bold ml-2">
+              <div className="hidden md:flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-sm font-hand font-bold ml-2 border-2 border-emerald-800">
                 <CheckCircle2 size={16} />
                 Fixed
               </div>
@@ -200,45 +200,45 @@ function IssueCard({
               <SeverityBadge severity={finding.severity} />
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Detected:</span>
-              <span className="text-xs font-bold text-slate-900">{formatRelativeTime(finding.detected_at)}</span>
+              <span className="text-xs font-hand font-bold text-slate-500 uppercase tracking-widest">Detected:</span>
+              <span className="text-xs font-hand font-bold text-slate-900">{formatRelativeTime(finding.detected_at)}</span>
             </div>
           </div>
         </div>
-        <div className="flex items-center justify-center p-2 rounded-full bg-slate-100 text-slate-500">
-          {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+        <div className="flex items-center justify-center p-2 rounded-full border-2 border-slate-800 bg-paper-200 text-slate-700 shadow-[2px_2px_0px_0px_rgba(30,41,59,1)]">
+          {isExpanded ? <ChevronUp size={20} className="stroke-[3]" /> : <ChevronDown size={20} className="stroke-[3]" />}
         </div>
       </div>
 
       {isExpanded && (
-        <div className="p-5 md:p-6 pt-0 border-t border-slate-100">
+        <div className="p-5 md:p-6 pt-0 border-t-2 border-slate-800 bg-paper-50">
           <div className="flex flex-col gap-5 mt-5">
-            <div className="bg-slate-50 p-4 rounded-xl space-y-4">
+            <div className="bg-paper-100 p-4 rounded-xl space-y-4 border-2 border-slate-800 shadow-[inset_2px_2px_0px_0px_rgba(0,0,0,0.05)]">
               <div>
-                <h4 className="text-base font-bold text-slate-900 mb-2">Why we detected this:</h4>
+                <h4 className="text-lg font-marker font-bold text-slate-900 mb-2">Why we detected this:</h4>
                 {finding.evidence && finding.evidence.length > 0 ? (
                   <div className="space-y-1">
                     {finding.evidence.map((ev, i) => (
-                      <p key={i} className="text-sm text-slate-700 font-medium">{ev}</p>
+                      <p key={i} className="text-base font-hand text-slate-800">{ev}</p>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-700">We found an unexpected security risk in this app.</p>
+                  <p className="text-base font-hand text-slate-800">We found an unexpected security risk in this app.</p>
                 )}
               </div>
 
               <div>
-                <h4 className="text-base font-bold text-slate-900 mb-1">Why this matters:</h4>
-                <p className="text-sm text-slate-700 leading-relaxed">
+                <h4 className="text-lg font-marker font-bold text-slate-900 mb-1">Why this matters:</h4>
+                <p className="text-base font-hand text-slate-800 leading-relaxed">
                   {finding.description}
                 </p>
               </div>
             </div>
 
             {!isResolved && (
-              <div className="bg-white border border-slate-200 rounded-xl p-4">
-                <h4 className="text-base font-bold text-slate-900 mb-3">What you can do:</h4>
-                <ol className="list-decimal list-inside space-y-2 text-sm text-slate-700 mb-5 font-medium">
+              <div className="bg-white border-2 border-slate-800 rounded-xl p-5 shadow-[4px_4px_0px_0px_rgba(30,41,59,1)]">
+                <h4 className="text-lg font-marker font-bold text-slate-900 mb-3">What you can do:</h4>
+                <ol className="list-decimal list-inside space-y-2 text-base font-hand text-slate-800 mb-6">
                   <li>Review the permissions requested by this app</li>
                   <li>Remove access to things it doesn't need</li>
                   <li>Uninstall the app if you don't trust it</li>
