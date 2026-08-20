@@ -51,11 +51,18 @@ class DummySecurityAdapter implements ISecurityAdapter {
       firewallStatus: { id: '', category: 'FIREWALL' as any, status: 'UNSUPPORTED' as any, value: '', source: '', confidence: 'low' as any, observedAt: '' },
       antivirusStatus: { id: '', category: 'SECURITY_SOFTWARE' as any, status: 'UNSUPPORTED' as any, value: '', source: '', confidence: 'low' as any, observedAt: '' },
       automaticUpdatesStatus: { id: '', category: 'SYSTEM_UPDATES' as any, status: 'UNSUPPORTED' as any, value: '', source: '', confidence: 'low' as any, observedAt: '' },
-      visibility: 'UNSUPPORTED' as const,
-      confidence: 'low' as const
-    };
+      usbDebuggingStatus: { id: '', category: 'DEVELOPER_MODE' as any, status: 'UNSUPPORTED' as any, value: '', source: '', confidence: 'low' as any, observedAt: '' },
+      playProtectStatus: { id: '', category: 'SECURITY_SOFTWARE' as any, status: 'UNSUPPORTED' as any, value: '', source: '', confidence: 'low' as any, observedAt: '' },
+      unknownSourcesStatus: { id: '', category: 'SYSTEM_UPDATES' as any, status: 'UNSUPPORTED' as any, value: '', source: '', confidence: 'low' as any, observedAt: '' },
+      accessibilityServicesStatus: { id: '', category: 'OS_SECURITY' as any, status: 'UNSUPPORTED' as any, value: '', source: '', confidence: 'low' as any, observedAt: '' },
+      deviceAdminStatus: { id: '', category: 'OS_SECURITY' as any, status: 'UNSUPPORTED' as any, value: '', source: '', confidence: 'low' as any, observedAt: '' },
+      bootloaderStatus: { id: '', category: 'SECURE_BOOT' as any, status: 'UNSUPPORTED' as any, value: '', source: '', confidence: 'low' as any, observedAt: '' },
+      systemTamperStatus: { id: '', category: 'ROOT_JAILBREAK' as any, status: 'UNSUPPORTED' as any, value: '', source: '', confidence: 'low' as any, observedAt: '' },
+      visibility: 'UNSUPPORTED' as any,
+      confidence: 'low' as any
+    } as any;
   }
-  async getNetworkSecuritySignals() {
+  async getNetworkSecuritySignals(): Promise<any> {
     const isElectronEnv = this.isElectron();
     return {
       platform: this.platform,
@@ -64,13 +71,13 @@ class DummySecurityAdapter implements ISecurityAdapter {
       wifiSecurity: { id: '', category: 'WIFI_SECURITY' as any, status: isElectronEnv ? 'SUPPORTED' : 'UNSUPPORTED' as any, value: '', source: '', confidence: 'low' as any, observedAt: '' },
       vpnState: { id: '', category: 'VPN_STATE' as any, status: isElectronEnv ? 'SUPPORTED' : 'UNSUPPORTED' as any, value: '', source: '', confidence: 'low' as any, observedAt: '' },
       dnsConfig: { id: '', category: 'DNS_CONFIG' as any, status: 'UNSUPPORTED' as any, value: '', source: '', confidence: 'low' as any, observedAt: '' },
-      visibility: isElectronEnv ? 'SUPPORTED' : 'UNSUPPORTED' as const,
-      confidence: isElectronEnv ? 'high' : 'low' as const
-    };
+      visibility: isElectronEnv ? 'SUPPORTED' : 'UNSUPPORTED' as any,
+      confidence: isElectronEnv ? 'high' : 'low' as any
+    } as any;
   }
-  async getInstalledAppSignals() { return []; }
-  async getPermissionSignals() { return []; }
-  async getAccountSecuritySignals() { return []; }
+  async getInstalledAppSignals(): Promise<any> { return []; }
+  async getPermissionSignals(): Promise<any> { return []; }
+  async getAccountSecuritySignals(): Promise<any> { return []; }
   async getInstalledApps(): Promise<any> { 
     if (this.isElectron() && typeof (window as any).electronAPI.scanApps === 'function') {
       const apps = await (window as any).electronAPI.scanApps();
@@ -107,12 +114,12 @@ class DummySecurityAdapter implements ISecurityAdapter {
     }
     return null; 
   }
-  getCapabilities() { 
+  getCapabilities(): any { 
     if (this.isElectron()) {
       return [
-        { capability: 'app_security' as const, status: 'supported' as const },
-        { capability: 'device_security' as const, status: 'supported' as const },
-        { capability: 'network_security' as const, status: 'supported' as const }
+        { capability: 'app_security', status: 'supported', platform: this.platform },
+        { capability: 'device_security', status: 'supported', platform: this.platform },
+        { capability: 'network_security', status: 'supported', platform: this.platform }
       ];
     }
     return []; 
@@ -125,7 +132,6 @@ export function getSecurityAdapter(): ISecurityAdapter {
   const factory = adapterMap[platform];
   if (!factory) {
     currentAdapter = new DummySecurityAdapter();
-    currentAdapter.platform = platform;
     return currentAdapter;
   }
   currentAdapter = factory();

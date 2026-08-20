@@ -27,7 +27,7 @@ export function PortScannerCard() {
 
     try {
       const scanResults = await window.electronAPI!.scanPorts('127.0.0.1');
-      setResults(scanResults);
+      setResults(scanResults as PortResult[]);
       setHasScanned(true);
     } catch (e) {
       console.error(e);
@@ -40,69 +40,76 @@ export function PortScannerCard() {
   const openPorts = results.filter(r => r.status === 'open');
 
   return (
-    <Card className="p-6 md:p-8 rounded-[32px] border-slate-100 shadow-sm bg-white hover:shadow-md transition-shadow relative overflow-hidden">
+    <Card className="p-6 md:p-8 rounded-[24px] border border-cyber-neon/20 shadow-[0_0_20px_rgba(255,42,66,0.1)] bg-cyber-surface hover:border-cyber-neon/40 transition-colors relative overflow-hidden group">
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,42,66,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,42,66,0.05)_1px,transparent_1px)] bg-[size:30px_30px] opacity-10 group-hover:opacity-20 transition-opacity" />
       <div className="absolute top-0 right-0 p-8 opacity-5">
-        <Server className="w-48 h-48 text-indigo-900" />
+        <Server className="w-48 h-48 text-cyber-neon" />
       </div>
       
       <div className="relative z-10 flex flex-col md:flex-row gap-6 md:items-center">
         <div className="flex-shrink-0">
-          <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center border border-indigo-100">
-            <Terminal className="w-8 h-8 text-indigo-600" />
+          <div className="w-16 h-16 rounded-xl bg-cyber-bg border border-cyber-neon/30 flex items-center justify-center shadow-[0_0_15px_rgba(255,42,66,0.2)]">
+            <Activity className="text-cyber-neon stroke-[2.5]" size={32} />
           </div>
         </div>
         
         <div className="flex-1">
-          <h3 className="text-xl font-bold text-slate-900 mb-2">Local Port Scanner</h3>
-          <p className="text-slate-500 mb-4 max-w-xl text-sm leading-relaxed">
-            Raw TCP scan of your localhost (127.0.0.1). Detects if background services, development tools, or malware are secretly exposing local servers that could be exploited.
-          </p>
-          
-          {!isDesktop ? (
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-50 text-slate-600 text-sm font-medium border border-slate-200">
-              <ShieldAlert className="w-4 h-4 text-slate-400" />
-              Desktop App Required
-            </div>
-          ) : (
-            <Button 
-              onClick={handleScan} 
-              disabled={isScanning}
-              className={`rounded-full px-6 font-semibold transition-all ${
-                isScanning ? 'bg-indigo-100 text-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200'
-              }`}
-            >
-              {isScanning ? (
-                <>
-                  <Activity className="w-4 h-4 mr-2 animate-pulse" />
-                  Scanning Ports...
-                </>
-              ) : (
-                'Scan Localhost'
-              )}
-            </Button>
-          )}
+          <h3 className="text-xl font-bold text-white tracking-wide uppercase font-outline mb-1">Local Port Scanner</h3>
+          <p className="text-sm font-mono text-cyber-textMuted uppercase">Identify exposed services on your machine.</p>
+        </div>
+        
+        <div className="flex-shrink-0">
+          <Button
+            onClick={handleScan}
+            disabled={isScanning || !isDesktop}
+            className="w-full md:w-auto bg-cyber-neon/10 text-cyber-neon hover:bg-cyber-neon hover:text-cyber-bg border border-cyber-neon/50 disabled:opacity-50 flex items-center justify-center gap-2 px-6 rounded-lg shadow-[0_0_15px_rgba(255,42,66,0.2)] uppercase tracking-widest font-bold text-xs h-11"
+          >
+            {isScanning ? (
+              <>
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                Scanning...
+              </>
+            ) : (
+              <>
+                <Search size={16} className="stroke-[2.5]" />
+                Scan Now
+              </>
+            )}
+          </Button>
         </div>
       </div>
 
+      {!isDesktop && (
+        <div className="mt-6 p-4 bg-cyber-surface/50 border border-cyber-neon/20 rounded-xl flex items-start gap-3 relative z-10">
+          <Terminal className="text-cyber-neon shrink-0 mt-0.5 stroke-[2]" size={20} />
+          <div>
+            <h4 className="text-sm font-bold text-white uppercase tracking-wider">Native Feature Required</h4>
+            <p className="text-xs text-cyber-textMuted mt-1">
+              Port scanning requires low-level network access. It is only available in the Sentinel Native App.
+            </p>
+          </div>
+        </div>
+      )}
+
       {error && (
-        <div className="mt-6 p-4 rounded-xl bg-red-50 text-red-600 text-sm border border-red-100 flex items-center gap-2">
-          <ShieldAlert className="w-4 h-4" />
-          {error}
+        <div className="mt-6 p-4 bg-red-950/40 border border-red-500/50 rounded-xl flex items-start gap-3 relative z-10 font-mono">
+          <ShieldAlert className="text-red-500 shrink-0 mt-0.5" size={20} />
+          <p className="text-sm text-red-200">{error}</p>
         </div>
       )}
 
       {hasScanned && !error && (
-        <div className="mt-8 pt-8 border-t border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="mt-8 pt-8 border-t border-cyber-neon/20 relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="flex items-center gap-3 mb-6">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${openPorts.length > 0 ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${openPorts.length > 0 ? 'bg-amber-900/40 text-amber-500' : 'bg-emerald-900/40 text-emerald-500'}`}>
               {openPorts.length > 0 ? <ShieldAlert className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
             </div>
             <div>
-              <h4 className="font-bold text-slate-900">
+              <h4 className="font-bold text-white uppercase tracking-wider">
                 {openPorts.length > 0 ? `${openPorts.length} Open Ports Detected` : 'All Common Ports Secure'}
               </h4>
-              <p className="text-sm text-slate-500">
-                {openPorts.length > 0 ? 'We found active services listening on your local machine.' : 'No unexpected backdoor services detected.'}
+              <p className="text-xs text-cyber-textMuted uppercase font-mono mt-1">
+                {openPorts.length > 0 ? 'Active services detected on localhost.' : 'No unauthorized backdoor services found.'}
               </p>
             </div>
           </div>
@@ -110,11 +117,11 @@ export function PortScannerCard() {
           {openPorts.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
               {openPorts.map((result) => (
-                <div key={result.port} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
-                  <div className="w-2 h-2 rounded-full bg-amber-500" />
+                <div key={result.port} className="flex items-center gap-3 p-3 rounded-lg bg-cyber-bg border border-cyber-neon/20">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
                   <div>
-                    <div className="font-mono text-sm font-bold text-slate-700">Port {result.port}</div>
-                    <div className="text-xs text-slate-500">{result.service}</div>
+                    <div className="font-mono text-xs font-bold text-white">PORT {result.port}</div>
+                    <div className="text-[10px] text-cyber-textMuted uppercase tracking-wider">{result.service}</div>
                   </div>
                 </div>
               ))}
@@ -122,8 +129,8 @@ export function PortScannerCard() {
           )}
           
           {openPorts.length === 0 && (
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 text-center">
-              <p className="text-sm text-slate-600 font-medium">Scanned 20+ common exploit ports. None are exposed.</p>
+            <div className="p-4 rounded-xl bg-cyber-bg/50 border border-emerald-500/20 text-center">
+              <p className="text-xs text-emerald-500 font-mono uppercase tracking-widest">System scan complete. No exposures found.</p>
             </div>
           )}
         </div>

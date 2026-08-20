@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/auth/AuthContext';
 
-export type TabId = 'home' | 'checkup' | 'issues' | 'tools' | 'vault' | 'learn' | 'settings' | 'habits';
+export type TabId = 'home' | 'checkup' | 'issues' | 'tools' | 'vault' | 'learn' | 'settings' | 'habits' | 'diagnostics';
 
 interface NavItem {
   id: TabId;
@@ -27,6 +27,7 @@ const navItems: NavItem[] = [
   { id: 'issues', label: 'Problems', icon: AlertTriangle },
   { id: 'tools', label: 'Tools', icon: Wrench },
   { id: 'vault', label: 'Vault', icon: Lock },
+  { id: 'learn', label: 'Learn', icon: GraduationCap },
 ];
 
 interface AppShellProps {
@@ -39,18 +40,18 @@ export function AppShell({ activeTab, onTabChange, children }: AppShellProps) {
   const { user, signOut } = useAuth();
 
   return (
-    <div className="min-h-screen bg-paper-50 text-slate-900 selection:bg-slate-900 selection:text-white font-sans">
+    <div className="min-h-screen bg-transparent">
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex fixed inset-y-0 left-0 w-64 flex-col border-r-2 border-slate-800 bg-paper-100 shadow-[4px_0px_0px_0px_rgba(30,41,59,1)] z-20">
-        <div className="flex items-center gap-3 px-6 h-16 border-b-2 border-slate-800">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg border-2 border-slate-800 bg-yellow-300 text-slate-900 shadow-[2px_2px_0px_0px_rgba(30,41,59,1)]">
+      <aside className="hidden md:flex fixed inset-y-0 left-0 w-64 flex-col border-r border-cyber-neon/20 bg-cyber-bg/95 backdrop-blur-xl z-20">
+        <div className="flex items-center gap-3 px-6 h-16 border-b border-cyber-neon/20">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-cyber-neon/50 bg-cyber-surface text-cyber-neon shadow-[0_0_15px_rgba(255,42,66,0.3)]">
             <ShieldCheck size={20} className="stroke-[2.5]" />
           </div>
-          <span className="font-marker font-bold text-slate-900 text-2xl tracking-wide">
+          <span className="font-outline font-bold text-white text-2xl tracking-widest uppercase">
             Sentinel
           </span>
         </div>
-        <nav className="flex-1 px-4 py-6 space-y-3">
+        <nav className="flex-1 px-4 py-6 space-y-2">
           {navItems.map((item) => (
             <DesktopNavItem
               key={item.id}
@@ -60,38 +61,38 @@ export function AppShell({ activeTab, onTabChange, children }: AppShellProps) {
             />
           ))}
         </nav>
-        <div className="border-t-2 border-slate-800 p-4 bg-paper-200">
+        <div className="border-t border-cyber-neon/20 p-4 bg-cyber-surface/30">
           <div className="flex items-center gap-3 px-2 py-2">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-slate-800 bg-blue-300 text-lg font-marker font-bold text-slate-900 shadow-[2px_2px_0px_0px_rgba(30,41,59,1)]">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-cyber-neon bg-cyber-bg text-lg font-sans font-bold text-white shadow-[0_0_10px_rgba(255,42,66,0.2)]">
               {(user?.email ?? '?').charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-base font-hand font-bold text-slate-900">
+              <p className="truncate text-sm font-sans font-medium text-cyber-text">
                 {user?.email}
               </p>
             </div>
           </div>
           <button
             onClick={() => signOut()}
-            className="mt-3 flex w-full items-center gap-2 rounded-lg border-2 border-transparent px-3 py-2 text-base font-hand font-bold text-slate-700 hover:border-slate-800 hover:bg-white transition-all shadow-none hover:shadow-[2px_2px_0px_0px_rgba(30,41,59,1)]"
+            className="mt-3 flex w-full items-center gap-2 rounded-lg border border-transparent px-3 py-2 text-sm font-sans font-medium text-cyber-textMuted hover:text-white hover:bg-cyber-surface transition-all hover:shadow-[0_0_15px_rgba(255,255,255,0.1)]"
           >
-            <LogOut size={18} className="stroke-[2.5]" />
+            <LogOut size={18} className="stroke-[2]" />
             Sign out
           </button>
         </div>
       </aside>
 
       {/* Mobile top bar */}
-      <header className="md:hidden sticky top-0 z-30 flex items-center justify-between border-b-2 border-slate-800 bg-paper-100 px-4 h-16 shadow-[0px_2px_0px_0px_rgba(30,41,59,1)]">
+      <header className="md:hidden sticky top-0 z-30 flex items-center justify-between border-b border-cyber-neon/20 bg-cyber-bg/80 backdrop-blur-md px-4 h-16">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg border-2 border-slate-800 bg-yellow-300 text-slate-900 shadow-[2px_2px_0px_0px_rgba(30,41,59,1)]">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-cyber-neon/50 bg-cyber-surface text-cyber-neon shadow-[0_0_10px_rgba(255,42,66,0.3)]">
             <ShieldCheck size={20} className="stroke-[2.5]" />
           </div>
-          <span className="font-marker font-bold text-slate-900 text-xl tracking-wide">Sentinel</span>
+          <span className="font-outline font-bold text-white text-xl tracking-widest uppercase">Sentinel</span>
         </div>
         <button
           onClick={() => onTabChange('settings')}
-          className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-slate-800 bg-blue-300 text-lg font-marker font-bold text-slate-900 shadow-[2px_2px_0px_0px_rgba(30,41,59,1)] active:translate-y-0.5 active:shadow-[0px_0px_0px_0px_rgba(30,41,59,1)] transition-all"
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-cyber-neon bg-cyber-surface text-sm font-sans font-bold text-white shadow-[0_0_10px_rgba(255,42,66,0.3)] transition-all active:scale-95"
           aria-label="Settings"
         >
           {(user?.email ?? '?').charAt(0).toUpperCase()}
@@ -99,15 +100,15 @@ export function AppShell({ activeTab, onTabChange, children }: AppShellProps) {
       </header>
 
       {/* Main content area */}
-      <main className="md:ml-64 pb-20 md:pb-0">
+      <main className="md:ml-64 pb-20 md:pb-0 relative z-10">
         <div className="mx-auto max-w-5xl px-4 py-8 md:px-8 md:py-10">
           {children}
         </div>
       </main>
 
       {/* Mobile bottom nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 border-t-2 border-slate-800 bg-paper-100 pb-safe shadow-[0px_-2px_0px_0px_rgba(30,41,59,1)]">
-        <div className="flex justify-around items-end h-16 px-2">
+      <nav className="md:hidden fixed bottom-4 left-4 right-4 z-30 rounded-2xl border border-cyber-neon/20 bg-cyber-surface/90 backdrop-blur-xl shadow-[0_0_30px_rgba(0,0,0,0.8)] pb-safe">
+        <div className="flex justify-around items-center h-16 px-2">
           {navItems.map((item) => (
             <MobileNavItem
               key={item.id}
@@ -127,13 +128,13 @@ function DesktopNavItem({ item, active, onClick }: { item: NavItem; active: bool
   return (
     <button
       onClick={onClick}
-      className={`group flex w-full items-center gap-3 rounded-xl border-2 px-3 py-3 text-lg font-hand font-bold transition-all ${
+      className={`group flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-sm font-sans font-semibold tracking-wide transition-all ${
         active
-          ? 'border-slate-800 bg-white text-slate-900 shadow-[3px_3px_0px_0px_rgba(30,41,59,1)] -translate-y-0.5'
-          : 'border-transparent text-slate-600 hover:border-slate-800 hover:bg-white hover:text-slate-900 hover:shadow-[3px_3px_0px_0px_rgba(30,41,59,1)] hover:-translate-y-0.5'
+          ? 'border-cyber-neon/40 bg-cyber-surface/50 text-white shadow-[0_0_15px_rgba(255,42,66,0.2)]'
+          : 'border-transparent text-cyber-textMuted hover:text-white hover:bg-cyber-surface/30 hover:border-cyber-neon/10'
       }`}
     >
-      <Icon size={22} className={`stroke-[2.5] ${active ? 'text-blue-600' : 'text-slate-500 group-hover:text-blue-600'}`} />
+      <Icon size={20} className={`stroke-[2] transition-colors ${active ? 'text-cyber-neon' : 'text-cyber-textMuted group-hover:text-cyber-neon/70'}`} />
       {item.label}
     </button>
   );
@@ -146,19 +147,9 @@ function MobileNavItem({ item, active, onClick }: { item: NavItem; active: boole
       onClick={onClick}
       className="flex flex-1 flex-col items-center justify-center gap-1 h-full relative"
     >
-      {active && (
-        <div className="absolute top-0 inset-x-0 h-1 bg-slate-800 rounded-b-full"></div>
-      )}
-      <div className={`p-1.5 rounded-lg border-2 ${active ? 'border-slate-800 bg-white shadow-[2px_2px_0px_0px_rgba(30,41,59,1)] -translate-y-1' : 'border-transparent text-slate-600'} transition-all`}>
-        <Icon size={22} className={`stroke-[2.5] ${active ? 'text-blue-600' : ''}`} />
+      <div className={`p-1.5 rounded-xl transition-all duration-300 ${active ? 'bg-cyber-neon/10 shadow-[0_0_15px_rgba(255,42,66,0.3)] -translate-y-1 scale-110' : 'text-cyber-textMuted'}`}>
+        <Icon size={22} className={`stroke-[2] ${active ? 'text-cyber-neon' : ''}`} />
       </div>
-      <span
-        className={`text-[12px] font-hand font-bold tracking-wide transition-colors ${
-          active ? 'text-slate-900' : 'text-slate-500'
-        }`}
-      >
-        {item.label}
-      </span>
     </button>
   );
 }

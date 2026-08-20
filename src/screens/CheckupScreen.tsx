@@ -20,10 +20,11 @@ import { supabase } from '@/lib/supabase';
 import { ScoreRing } from '@/components/ui/ScoreRing';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { generateScoreFromFindings } from '@/engine/RiskEngine';
+import { generateScoreFromFindings } from '@/engine/riskEngine';
 import type { ScanResult } from '@/types';
 import type { ScanPhase } from '@/engine/SecurityScanner';
 import { AppInventoryModal } from '@/components/ui/AppInventoryModal';
+import { Capacitor } from '@capacitor/core';
 
 export type ExtendedScanPhase = ScanPhase | 'idle';
 
@@ -107,7 +108,7 @@ export function CheckupScreen({
                console.error('Failed to insert findings:', JSON.stringify(dbError, null, 2));
              } else {
                console.log("[DATABASE INSERT SUCCESS]");
-               const riskResult = generateScoreFromFindings(findingRows);
+               const riskResult = generateScoreFromFindings(result.findings);
                await supabase.from('risk_scores').insert({
                  user_id: user.id,
                  checkup_id: newCheckup.id,

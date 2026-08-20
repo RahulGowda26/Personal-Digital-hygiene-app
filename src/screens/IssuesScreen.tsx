@@ -64,8 +64,8 @@ export function IssuesScreen({ onOpenPlaybook }: IssuesScreenProps) {
         const bOpen = b.status === 'open' ? 0 : 1;
         if (aOpen !== bOpen) return aOpen - bOpen;
         // Then by severity
-        const aSev = typeof severityRank === 'function' ? severityRank(a.severity) : (a.severity === 'critical' ? 0 : a.severity === 'high' ? 1 : a.severity === 'medium' ? 2 : 3);
-        const bSev = typeof severityRank === 'function' ? severityRank(b.severity) : (b.severity === 'critical' ? 0 : b.severity === 'high' ? 1 : b.severity === 'medium' ? 2 : 3);
+        const aSev = typeof severityRank === 'function' ? (severityRank as any)(a.severity) : (severityRank as any)[a.severity] ?? (a.severity === 'critical' ? 0 : a.severity === 'high' ? 1 : a.severity === 'medium' ? 2 : 3);
+        const bSev = typeof severityRank === 'function' ? (severityRank as any)(b.severity) : (severityRank as any)[b.severity] ?? (b.severity === 'critical' ? 0 : b.severity === 'high' ? 1 : b.severity === 'medium' ? 2 : 3);
         if (aSev !== bSev) return aSev - bSev;
         
         // Then by detected_at (newest first)
@@ -86,30 +86,28 @@ export function IssuesScreen({ onOpenPlaybook }: IssuesScreenProps) {
   if (error) return <ErrorState message={error} onRetry={load} />;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-4">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Issues</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <h1 className="text-3xl font-outline text-outline-glow tracking-widest uppercase">Issues</h1>
+          <p className="text-sm font-sans text-cyber-textMuted mt-1">
             {openCount > 0
               ? `${openCount} ${openCount === 1 ? 'issue' : 'issues'} need attention`
               : 'No open issues. Your digital security looks healthy.'}
           </p>
         </div>
-        <Button variant="ghost" size="sm" onClick={load}>
+        <button className="flex items-center gap-2 px-3 py-2 rounded-full border border-cyber-neon/20 bg-cyber-surface text-cyber-neon text-xs font-sans font-semibold hover:bg-cyber-neon/10 transition-colors" onClick={load}>
           <RefreshCw size={14} />
           Refresh
-        </Button>
+        </button>
       </div>
 
       {findings.length === 0 ? (
-        <Card>
-          <EmptyState
-            icon={<Inbox size={24} />}
-            title="No issues yet"
-            description="Run a checkup to detect security issues and get personalized recommendations."
-          />
-        </Card>
+        <div className="cyber-card p-8 flex flex-col items-center justify-center text-center">
+          <Inbox size={48} className="text-cyber-neon/50 mb-4" />
+          <h3 className="text-xl font-sans font-semibold text-white mb-2">No issues yet</h3>
+          <p className="text-sm text-cyber-textMuted">Run a checkup to detect security issues.</p>
+        </div>
       ) : (
         <>
           {/* Filter pills */}
@@ -118,10 +116,10 @@ export function IssuesScreen({ onOpenPlaybook }: IssuesScreenProps) {
               <button
                 key={f.value}
                 onClick={() => setFilter(f.value)}
-                className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                className={`rounded-full px-4 py-1.5 text-xs font-sans font-semibold uppercase tracking-wider transition-all border ${
                   filter === f.value
-                    ? 'bg-slate-900 text-white'
-                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                    ? 'bg-cyber-neon/20 border-cyber-neon text-cyber-neon shadow-[0_0_10px_rgba(255,42,66,0.2)]'
+                    : 'bg-cyber-surface/50 border-cyber-neon/10 text-cyber-textMuted hover:border-cyber-neon/30 hover:text-white'
                 }`}
               >
                 {f.label}
@@ -130,13 +128,11 @@ export function IssuesScreen({ onOpenPlaybook }: IssuesScreenProps) {
           </div>
 
           {/* Issue cards */}
-          <div className="space-y-3">
+          <div className="space-y-4">
             {filtered.length === 0 ? (
-              <Card>
-                <p className="text-sm text-slate-500 text-center py-6">
-                  No issues at this risk level.
-                </p>
-              </Card>
+              <div className="cyber-card p-8 text-center text-cyber-textMuted text-sm font-sans">
+                No issues at this risk level.
+              </div>
             ) : (
               filtered.map((finding) => (
                 <IssueCard
@@ -173,106 +169,117 @@ function IssueCard({
   onResolve: () => void;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const c = severityColors[finding.severity];
+  
+  const getSeverityColor = (sev: string) => {
+    switch (sev) {
+      case 'critical': return 'text-cyber-neon border-cyber-neon shadow-[0_0_15px_rgba(255,42,66,0.2)]';
+      case 'high': return 'text-orange-500 border-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.2)]';
+      case 'medium': return 'text-yellow-500 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]';
+      default: return 'text-blue-500 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.2)]';
+    }
+  };
+
+  const getSeverityGlow = (sev: string) => {
+    switch (sev) {
+      case 'critical': return 'shadow-[inset_4px_0_0_0_rgba(255,42,66,1)]';
+      case 'high': return 'shadow-[inset_4px_0_0_0_rgba(249,115,22,1)]';
+      case 'medium': return 'shadow-[inset_4px_0_0_0_rgba(234,179,8,1)]';
+      default: return 'shadow-[inset_4px_0_0_0_rgba(59,130,246,1)]';
+    }
+  };
+
+  const severityClasses = getSeverityColor(finding.severity);
+  const glowClass = getSeverityGlow(finding.severity);
   const isResolved = finding.status === 'resolved';
 
   return (
-    <Card className={`border-l-8 ${c.border} shadow-[4px_4px_0px_0px_rgba(30,41,59,1)] overflow-hidden border-2 border-slate-800`} padding="none">
+    <div className={`cyber-card overflow-hidden transition-all duration-300 ${isExpanded ? glowClass : ''}`}>
       <div 
-        className="p-5 md:p-6 cursor-pointer hover:bg-paper-100 transition-colors flex items-center justify-between"
+        className="p-5 flex items-center justify-between cursor-pointer hover:bg-cyber-neon/5 transition-colors"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 flex-1">
           <div className="flex items-center gap-3">
-            <AlertTriangle className={c.text} size={24} />
-            <h3 className="text-xl md:text-2xl font-marker font-bold text-slate-900 leading-tight tracking-wide">
+            <AlertTriangle className={isResolved ? 'text-emerald-500' : 'text-cyber-neon'} size={20} />
+            <h3 className={`text-lg font-sans font-bold leading-tight ${isResolved ? 'text-cyber-textMuted line-through' : 'text-white'}`}>
               {finding.title}
             </h3>
-            {isResolved && (
-              <div className="hidden md:flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-sm font-hand font-bold ml-2 border-2 border-emerald-800">
-                <CheckCircle2 size={16} />
-                Fixed
-              </div>
-            )}
           </div>
-          <div className="flex items-center gap-4 ml-9">
-            <div className="flex items-center gap-2">
-              <SeverityBadge severity={finding.severity} />
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-hand font-bold text-slate-500 uppercase tracking-widest">Detected:</span>
-              <span className="text-xs font-hand font-bold text-slate-900">{formatRelativeTime(finding.detected_at)}</span>
-            </div>
+          <div className="flex items-center gap-4 ml-8">
+            <span className={`text-[10px] font-sans font-bold uppercase tracking-widest px-2 py-0.5 rounded-sm border ${severityClasses}`}>
+              {finding.severity}
+            </span>
+            <span className="text-xs font-sans text-cyber-textMuted">
+              {formatRelativeTime(finding.detected_at)}
+            </span>
           </div>
         </div>
-        <div className="flex items-center justify-center p-2 rounded-full border-2 border-slate-800 bg-paper-200 text-slate-700 shadow-[2px_2px_0px_0px_rgba(30,41,59,1)]">
-          {isExpanded ? <ChevronUp size={20} className="stroke-[3]" /> : <ChevronDown size={20} className="stroke-[3]" />}
+        <div className="ml-4 text-cyber-neon/50">
+          {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
         </div>
       </div>
 
       {isExpanded && (
-        <div className="p-5 md:p-6 pt-0 border-t-2 border-slate-800 bg-paper-50">
-          <div className="flex flex-col gap-5 mt-5">
-            <div className="bg-paper-100 p-4 rounded-xl space-y-4 border-2 border-slate-800 shadow-[inset_2px_2px_0px_0px_rgba(0,0,0,0.05)]">
+        <div className="p-5 pt-0 border-t border-cyber-neon/10 bg-cyber-bg/50">
+          <div className="flex flex-col gap-6 mt-5">
+            <div className="space-y-4">
               <div>
-                <h4 className="text-lg font-marker font-bold text-slate-900 mb-2">Why we detected this:</h4>
+                <h4 className="text-xs font-sans font-bold text-cyber-neon uppercase tracking-wider mb-2">Why we detected this:</h4>
                 {finding.evidence && finding.evidence.length > 0 ? (
                   <div className="space-y-1">
                     {finding.evidence.map((ev, i) => (
-                      <p key={i} className="text-base font-hand text-slate-800">{ev}</p>
+                      <p key={i} className="text-sm font-sans text-cyber-text">{ev}</p>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-base font-hand text-slate-800">We found an unexpected security risk in this app.</p>
+                  <p className="text-sm font-sans text-cyber-text">We found an unexpected security risk in this app.</p>
                 )}
               </div>
 
               <div>
-                <h4 className="text-lg font-marker font-bold text-slate-900 mb-1">Why this matters:</h4>
-                <p className="text-base font-hand text-slate-800 leading-relaxed">
+                <h4 className="text-xs font-sans font-bold text-cyber-neon uppercase tracking-wider mb-2">Why this matters:</h4>
+                <p className="text-sm font-sans text-cyber-text leading-relaxed">
                   {finding.description}
                 </p>
               </div>
             </div>
 
             {!isResolved && (
-              <div className="bg-white border-2 border-slate-800 rounded-xl p-5 shadow-[4px_4px_0px_0px_rgba(30,41,59,1)]">
-                <h4 className="text-lg font-marker font-bold text-slate-900 mb-3">What you can do:</h4>
-                <ol className="list-decimal list-inside space-y-2 text-base font-hand text-slate-800 mb-6">
+              <div className="border border-cyber-neon/20 bg-cyber-surface rounded-xl p-5 shadow-[0_0_20px_rgba(255,42,66,0.1)]">
+                <h4 className="text-xs font-sans font-bold text-cyber-neon uppercase tracking-wider mb-3">Action Plan:</h4>
+                <ol className="list-decimal list-inside space-y-2 text-sm font-sans text-cyber-text mb-6">
                   <li>Review the permissions requested by this app</li>
                   <li>Remove access to things it doesn't need</li>
                   <li>Uninstall the app if you don't trust it</li>
                 </ol>
                 
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <Button
-                    variant="primary"
-                    className="flex-1 text-base py-3"
+                  <button
+                    className="flex-1 text-sm font-sans font-semibold py-3 px-4 bg-cyber-neon/10 text-cyber-neon border border-cyber-neon hover:bg-cyber-neon hover:text-white transition-colors rounded-lg flex items-center justify-center gap-2"
                     onClick={(e) => {
                       e.stopPropagation();
                       onOpenPlaybook(finding.id);
                     }}
                   >
                     Open Settings
-                    <ChevronRight size={18} />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="flex-1 text-base py-3 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                    <ChevronRight size={16} />
+                  </button>
+                  <button
+                    className="flex-1 text-sm font-sans font-semibold py-3 px-4 border border-emerald-500/50 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-colors rounded-lg flex items-center justify-center gap-2"
                     onClick={(e) => {
                       e.stopPropagation();
                       onResolve();
                     }}
                   >
-                    <CheckCircle2 size={18} className="mr-2" />
+                    <CheckCircle2 size={16} />
                     Mark as Fixed
-                  </Button>
+                  </button>
                 </div>
               </div>
             )}
           </div>
         </div>
       )}
-    </Card>
+    </div>
   );
 }

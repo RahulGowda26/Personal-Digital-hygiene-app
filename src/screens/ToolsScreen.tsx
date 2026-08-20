@@ -48,67 +48,68 @@ export function ToolsScreen() {
   };
 
   return (
-    <div className="w-full pb-24 md:pb-8 text-slate-900 font-sans">
+    <div className="w-full pb-24 md:pb-8 text-cyber-text font-sans">
       <div className="w-full pt-2 md:pt-4">
         
         {/* Header */}
         <div className="mb-8 md:mb-10">
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2">Security Tools</h1>
-          <p className="text-slate-500 font-medium">Real-world utilities to keep your identity safe.</p>
+          <h1 className="text-3xl md:text-4xl font-outline font-bold tracking-widest uppercase text-white mb-2 shadow-cyber">SECURITY TOOLS</h1>
+          <p className="text-cyber-textMuted font-medium font-mono text-sm uppercase tracking-wide">Real-world utilities / active defense</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           
           {/* Password Leak Checker */}
-          <Card className="p-6 md:p-8 rounded-[32px] border-slate-100 shadow-sm bg-white flex flex-col h-full">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-slate-100 text-slate-900">
-                <KeyRound size={24} />
+          <Card className="p-6 md:p-8 rounded-[24px] border border-cyber-neon/20 shadow-[0_0_20px_rgba(255,42,66,0.1)] bg-cyber-surface flex flex-col h-full relative overflow-hidden group">
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,42,66,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,42,66,0.05)_1px,transparent_1px)] bg-[size:30px_30px] opacity-20 group-hover:opacity-40 transition-opacity" />
+            <div className="flex items-center gap-4 mb-6 relative z-10">
+              <div className="flex items-center justify-center w-12 h-12 rounded-xl border border-cyber-neon/30 bg-cyber-bg text-cyber-neon shadow-[0_0_15px_rgba(255,42,66,0.2)]">
+                <KeyRound size={24} className="stroke-[2.5]" />
               </div>
               <div>
-                <h2 className="text-xl font-bold">Password Leak Checker</h2>
-                <p className="text-sm text-slate-500">Powered by Have I Been Pwned</p>
+                <h2 className="text-xl font-bold text-white tracking-wide">Password Leak Checker</h2>
+                <p className="text-xs font-mono text-cyber-neon/70 uppercase">Powered by HIBP</p>
               </div>
             </div>
             
-            <p className="text-sm text-slate-600 mb-6 flex-1">
+            <p className="text-sm text-cyber-textMuted mb-6 flex-1 relative z-10">
               Check if your password was exposed in a known data breach. 
-              <span className="font-semibold block mt-1 text-slate-700">100% Private: Only an anonymized hash is sent.</span>
+              <span className="font-semibold block mt-2 text-cyber-neon/80 text-xs tracking-wider uppercase">100% Private: Hash-only exchange</span>
             </p>
 
-            <form onSubmit={handleCheckPassword} className="space-y-4">
+            <form onSubmit={handleCheckPassword} className="space-y-4 relative z-10">
               <div className="relative">
                 <input
                   type="password"
-                  placeholder="Enter a password to check..."
+                  placeholder="Enter password..."
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                  className="w-full pl-4 pr-12 py-3 bg-cyber-bg/80 border border-cyber-neon/30 rounded-xl focus:outline-none focus:ring-1 focus:ring-cyber-neon focus:border-cyber-neon text-white font-mono placeholder:text-cyber-textMuted/50 transition-all"
                 />
                 <button
                   type="submit"
                   disabled={isCheckingPassword || !password}
-                  className="absolute right-2 top-2 bottom-2 bg-slate-900 text-white p-2 rounded-lg hover:bg-slate-800 disabled:opacity-50 transition-colors"
+                  className="absolute right-2 top-2 bottom-2 bg-cyber-neon/10 text-cyber-neon p-2 rounded-lg hover:bg-cyber-neon hover:text-cyber-bg border border-transparent hover:border-cyber-neon disabled:opacity-50 transition-all shadow-[0_0_10px_rgba(255,42,66,0.2)]"
                 >
-                  {isCheckingPassword ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Search size={18} />}
+                  {isCheckingPassword ? <div className="w-5 h-5 border-2 border-cyber-neon/30 border-t-cyber-neon rounded-full animate-spin" /> : <Search size={18} className="stroke-[2.5]" />}
                 </button>
               </div>
             </form>
 
             {passwordResult && (
-              <div className={`mt-6 p-4 rounded-2xl border ${passwordResult.error ? 'bg-red-50 border-red-100' : passwordResult.count > 0 ? 'bg-[#fff1ef] border-[#ffcdc4]' : 'bg-emerald-50 border-emerald-100'}`}>
+              <div className={`mt-6 p-4 rounded-xl border relative z-10 font-mono ${passwordResult.error ? 'bg-red-950/40 border-red-500/50' : passwordResult.count > 0 ? 'bg-cyber-neon/10 border-cyber-neon/50' : 'bg-emerald-950/40 border-emerald-500/50'}`}>
                 {passwordResult.error ? (
                   <div className="flex items-start gap-3">
                     <AlertCircle className="text-red-500 mt-0.5 shrink-0" size={20} />
-                    <p className="text-sm font-medium text-red-900">{passwordResult.error}</p>
+                    <p className="text-sm font-medium text-red-200">{passwordResult.error}</p>
                   </div>
                 ) : passwordResult.count > 0 ? (
                   <div className="flex items-start gap-3">
-                    <AlertTriangle className="text-[#ff6b52] mt-0.5 shrink-0" size={20} />
+                    <AlertTriangle className="text-cyber-neon mt-0.5 shrink-0" size={20} />
                     <div>
-                      <p className="text-sm font-bold text-[#d94a32]">Oh no — pwned!</p>
-                      <p className="text-sm text-[#d94a32]/80 mt-1">
-                        This password has been seen <strong>{passwordResult.count.toLocaleString()}</strong> times in data breaches. You should never use it.
+                      <p className="text-sm font-bold text-white uppercase tracking-wider">Breach Detected</p>
+                      <p className="text-xs text-cyber-neon/80 mt-1">
+                        Found <strong className="text-cyber-neon">{passwordResult.count.toLocaleString()}</strong> times in data breaches. Do not use.
                       </p>
                     </div>
                   </div>
@@ -116,8 +117,8 @@ export function ToolsScreen() {
                   <div className="flex items-start gap-3">
                     <CheckCircle2 className="text-emerald-500 mt-0.5 shrink-0" size={20} />
                     <div>
-                      <p className="text-sm font-bold text-emerald-900">Good news!</p>
-                      <p className="text-sm text-emerald-800/80 mt-1">This password wasn't found in any known data breaches.</p>
+                      <p className="text-sm font-bold text-emerald-400 uppercase tracking-wider">Secure</p>
+                      <p className="text-xs text-emerald-500/80 mt-1">No known breaches found for this hash.</p>
                     </div>
                   </div>
                 )}
@@ -126,69 +127,70 @@ export function ToolsScreen() {
           </Card>
 
           {/* Link Scanner */}
-          <Card className="p-6 md:p-8 rounded-[32px] border-slate-100 shadow-sm bg-white flex flex-col h-full">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-slate-100 text-slate-900">
-                <LinkIcon size={24} />
+          <Card className="p-6 md:p-8 rounded-[24px] border border-cyber-neon/20 shadow-[0_0_20px_rgba(255,42,66,0.1)] bg-cyber-surface flex flex-col h-full relative overflow-hidden group">
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,42,66,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,42,66,0.05)_1px,transparent_1px)] bg-[size:30px_30px] opacity-20 group-hover:opacity-40 transition-opacity" />
+            <div className="flex items-center gap-4 mb-6 relative z-10">
+              <div className="flex items-center justify-center w-12 h-12 rounded-xl border border-cyber-neon/30 bg-cyber-bg text-cyber-neon shadow-[0_0_15px_rgba(255,42,66,0.2)]">
+                <LinkIcon size={24} className="stroke-[2.5]" />
               </div>
               <div>
-                <h2 className="text-xl font-bold">Suspicious Link Scanner</h2>
-                <p className="text-sm text-slate-500">Heuristic Threat Analyzer</p>
+                <h2 className="text-xl font-bold text-white tracking-wide">Suspicious Link Scanner</h2>
+                <p className="text-xs font-mono text-cyber-neon/70 uppercase">Heuristic Threat Analyzer</p>
               </div>
             </div>
             
-            <p className="text-sm text-slate-600 mb-6 flex-1">
-              Received a sketchy SMS or email? Paste the link here before clicking it to check for phishing and malicious patterns.
+            <p className="text-sm text-cyber-textMuted mb-6 flex-1 relative z-10">
+              Paste suspicious URLs here before clicking. The engine checks for phishing patterns and homograph attacks.
             </p>
 
-            <form onSubmit={handleCheckUrl} className="space-y-4">
+            <form onSubmit={handleCheckUrl} className="space-y-4 relative z-10">
               <div className="relative">
                 <input
                   type="url"
-                  placeholder="https://example.com"
+                  placeholder="https://..."
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
-                  className="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                  className="w-full pl-4 pr-12 py-3 bg-cyber-bg/80 border border-cyber-neon/30 rounded-xl focus:outline-none focus:ring-1 focus:ring-cyber-neon focus:border-cyber-neon text-white font-mono placeholder:text-cyber-textMuted/50 transition-all"
                 />
                 <button
                   type="submit"
                   disabled={isCheckingUrl || !url}
-                  className="absolute right-2 top-2 bottom-2 bg-slate-900 text-white p-2 rounded-lg hover:bg-slate-800 disabled:opacity-50 transition-colors"
+                  className="absolute right-2 top-2 bottom-2 bg-cyber-neon/10 text-cyber-neon p-2 rounded-lg hover:bg-cyber-neon hover:text-cyber-bg border border-transparent hover:border-cyber-neon disabled:opacity-50 transition-all shadow-[0_0_10px_rgba(255,42,66,0.2)]"
                 >
-                  {isCheckingUrl ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <ArrowRight size={18} />}
+                  {isCheckingUrl ? <div className="w-5 h-5 border-2 border-cyber-neon/30 border-t-cyber-neon rounded-full animate-spin" /> : <ArrowRight size={18} className="stroke-[2.5]" />}
                 </button>
               </div>
             </form>
 
             {urlResult && (
-              <div className={`mt-6 p-4 rounded-2xl border ${urlResult.isSafe ? 'bg-emerald-50 border-emerald-100' : 'bg-[#fff1ef] border-[#ffcdc4]'}`}>
+              <div className={`mt-6 p-4 rounded-xl border relative z-10 font-mono ${urlResult.isSafe ? 'bg-emerald-950/40 border-emerald-500/50' : 'bg-cyber-neon/10 border-cyber-neon/50'}`}>
                 <div className="flex items-start gap-3">
                   {urlResult.isSafe ? (
                      <CheckCircle2 className="text-emerald-500 mt-0.5 shrink-0" size={20} />
                   ) : (
-                     <ShieldAlert className="text-[#ff6b52] mt-0.5 shrink-0" size={20} />
+                     <ShieldAlert className="text-cyber-neon mt-0.5 shrink-0" size={20} />
                   )}
                   <div className="w-full">
                     <div className="flex justify-between items-center">
-                      <p className={`text-sm font-bold ${urlResult.isSafe ? 'text-emerald-900' : 'text-[#d94a32]'}`}>
+                      <p className={`text-sm font-bold uppercase tracking-wider ${urlResult.isSafe ? 'text-emerald-400' : 'text-cyber-neon'}`}>
                         {urlResult.isSafe ? 'Looks Safe' : 'Highly Suspicious'}
                       </p>
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${urlResult.isSafe ? 'bg-emerald-200 text-emerald-900' : 'bg-[#ff6b52] text-white'}`}>
-                        Score: {urlResult.score}/100
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${urlResult.isSafe ? 'bg-emerald-500/20 text-emerald-400' : 'bg-cyber-neon/20 text-cyber-neon border border-cyber-neon/50'}`}>
+                        SCORE: {urlResult.score}/100
                       </span>
                     </div>
                     
                     {urlResult.flags.length > 0 ? (
                       <ul className="mt-3 space-y-1.5">
                         {urlResult.flags.map((flag, idx) => (
-                          <li key={idx} className="text-xs flex items-start gap-1.5 text-slate-700">
-                            <span className="text-red-500 mt-0.5">•</span>
+                          <li key={idx} className="text-xs flex items-start gap-1.5 text-cyber-neon/90">
+                            <span className="text-cyber-neon mt-0.5">⟩</span>
                             {flag}
                           </li>
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-sm text-emerald-800/80 mt-1">No suspicious patterns detected.</p>
+                      <p className="text-xs text-emerald-500/80 mt-1">No suspicious patterns detected.</p>
                     )}
                   </div>
                 </div>
@@ -199,32 +201,33 @@ export function ToolsScreen() {
             <PortScannerCard />
           </div>
 
-          <Card className="p-6 md:p-8 rounded-[32px] border-slate-100 shadow-sm bg-white hover:shadow-md transition-shadow col-span-1 md:col-span-2 relative overflow-hidden">
+          <Card className="p-6 md:p-8 rounded-[24px] border border-cyber-neon/20 shadow-[0_0_20px_rgba(255,42,66,0.1)] bg-cyber-surface hover:border-cyber-neon/40 transition-colors col-span-1 md:col-span-2 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-8 opacity-5">
-              <Globe size={120} />
+              <Globe size={120} className="text-cyber-neon" />
             </div>
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,42,66,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,42,66,0.05)_1px,transparent_1px)] bg-[size:30px_30px] opacity-10 group-hover:opacity-20 transition-opacity" />
             
             <div className="relative z-10">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-white">
-                  <Globe size={24} />
+                <div className="w-12 h-12 rounded-xl border border-cyber-neon/30 bg-cyber-bg text-cyber-neon shadow-[0_0_15px_rgba(255,42,66,0.2)] flex items-center justify-center">
+                  <Globe size={24} className="stroke-[2.5]" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-xl text-slate-900">Real-Time Web Protection</h3>
-                  <p className="text-sm font-medium text-slate-500">Block malicious sites before they load.</p>
+                  <h3 className="font-bold text-xl text-white tracking-wide uppercase font-outline">Active Web Protection</h3>
+                  <p className="text-xs font-mono text-cyber-neon/70 uppercase">Block malicious requests</p>
                 </div>
               </div>
               
-              <p className="text-slate-600 mb-6 max-w-xl">
+              <p className="text-cyber-textMuted text-sm mb-6 max-w-xl">
                 Get the Sentinel Chrome Extension to automatically track and scan the websites you visit in real-time. It seamlessly blocks phishing links, typosquatting domains, and IP-based threats across your entire browser.
               </p>
               
               <Button 
                 onClick={() => alert("To install the extension:\n1. Open Chrome Extensions (chrome://extensions/)\n2. Enable Developer Mode\n3. Click 'Load unpacked' and select the 'extension' folder in this project.")}
-                className="bg-slate-900 text-white hover:bg-slate-800 rounded-full flex items-center gap-2 px-6"
+                className="bg-cyber-neon/10 text-cyber-neon hover:bg-cyber-neon hover:text-cyber-bg border border-cyber-neon/50 rounded-lg flex items-center gap-2 px-6 shadow-[0_0_15px_rgba(255,42,66,0.2)] uppercase tracking-widest font-bold text-xs"
               >
-                <Download size={18} />
-                Install Companion Extension
+                <Download size={16} className="stroke-[2.5]" />
+                Install Extension
               </Button>
             </div>
           </Card>

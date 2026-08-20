@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  Calendar,
-  ChevronRight,
   ShieldCheck,
   Smartphone,
   AppWindow,
   EyeOff,
   Globe,
+  TrendingUp,
+  Zap,
+  AlertTriangle,
 } from 'lucide-react';
 import type { DashboardData } from '@/types';
 import { fetchDashboard, ensureDevice } from '@/services/api';
@@ -126,209 +127,102 @@ export function HomeScreen({
   const trendColor = hasScanned ? `text-[${scoreColorHex}]` : "text-slate-400";
 
   return (
-    <div className="pb-24 md:pb-8 text-slate-900 font-sans w-full">
-      <div className="w-full pt-2 md:pt-4">
+    <div className="pb-24 md:pb-8 w-full flex flex-col items-center relative min-h-[calc(100vh-80px)]">
+      
+      {/* Background Graphic Placeholder (Raven / Celtic knot) */}
+      <div className="absolute top-0 inset-x-0 h-[400px] pointer-events-none overflow-hidden flex justify-center opacity-30">
+        <div className="w-[350px] h-[350px] rounded-full border border-cyber-neon/20 shadow-[0_0_50px_rgba(255,42,66,0.1)] absolute top-[-50px]"></div>
+        <div className="w-[250px] h-[250px] rounded-full border border-cyber-neon/40 shadow-[0_0_100px_rgba(255,42,66,0.2)] absolute top-0 bg-cyber-neon/5"></div>
+      </div>
+
+      {/* Hero Typography Section */}
+      <div className="relative mt-12 md:mt-20 flex flex-col items-center w-full max-w-sm z-10">
+        <div className="flex flex-col items-start w-full pl-4 relative">
+          <span className="text-white font-sans font-semibold tracking-[0.3em] text-sm mb-[-10px] ml-1">
+            SENTINEL
+          </span>
+          <div className="relative">
+            <h1 className="font-outline text-outline-glow text-[100px] md:text-[120px] leading-none tracking-wider opacity-80 select-none">
+              SCORE
+            </h1>
+            <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[45%] font-cursive text-[140px] text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.5)] whitespace-nowrap">
+              {hasScanned ? score : '-'}
+            </span>
+          </div>
+        </div>
+
+        {/* Date / Timeline Selector */}
+        <div className="flex items-center justify-center gap-4 mt-12 md:mt-16 w-full">
+          {generateTimeline(data.historicalScores || []).slice(2, 7).map((item, idx) => (
+            <div 
+              key={idx}
+              className={`w-10 h-10 rounded-full flex items-center justify-center font-sans font-bold text-sm transition-all ${
+                item.active 
+                  ? 'bg-cyber-neon text-white shadow-[0_0_15px_rgba(255,42,66,0.6)]' 
+                  : 'text-cyber-textMuted hover:text-white'
+              }`}
+            >
+              {item.date < 10 ? `0${item.date}` : item.date}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Action Pills Grid */}
+      <div className="w-full max-w-md mt-12 md:mt-16 grid grid-cols-2 gap-4 px-4 z-10">
         
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8 md:mb-10">
-          <div>
-            <h1 className="font-marker text-[32px] md:text-5xl font-bold tracking-wide">Home</h1>
-            <p className="text-base font-hand font-bold text-slate-500 mt-1">
-              {new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date())}
-            </p>
+        <button 
+          onClick={onViewIssues}
+          className="cyber-card p-4 flex flex-col items-start gap-1 justify-center relative group overflow-hidden"
+        >
+          <div className="absolute top-2 right-2 p-1 opacity-50 group-hover:opacity-100 transition-opacity">
+            <AlertTriangle size={18} className="text-cyber-neon" />
           </div>
-          <button className="w-12 h-12 md:w-14 md:h-14 rounded-full border-2 border-slate-800 bg-yellow-300 flex items-center justify-center text-slate-900 shadow-[2px_2px_0px_0px_rgba(30,41,59,1)] active:translate-y-0.5 active:shadow-[0px_0px_0px_0px_rgba(30,41,59,1)] transition-all">
-            <Calendar size={24} className="stroke-[2.5]" />
-          </button>
-        </div>
+          <span className="text-cyber-neon font-sans font-semibold text-sm">Issues</span>
+          <span className="text-cyber-textMuted text-[10px] md:text-xs leading-tight w-[80%] text-left">
+            Review vulnerabilities
+          </span>
+        </button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
-          
-          {/* Left Column (Timeline & Primary Score) */}
-          <div className="lg:col-span-5 flex flex-col gap-6 md:gap-8">
-            
-            {/* Timeline Widget */}
-            <div className="flex justify-between items-center px-1">
-              {generateTimeline(data.historicalScores || []).map((item, idx) => (
-                <div key={idx} className="flex flex-col items-center gap-2">
-                  <span className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">{item.day}</span>
-                  <div 
-                    className={`w-[38px] h-[38px] md:w-11 md:h-11 rounded-full flex items-center justify-center text-sm font-bold shadow-sm transition-all
-                      ${item.active 
-                        ? 'text-white shadow-[0_4px_14px_rgba(0,0,0,0.1)]' 
-                        : item.hasData 
-                          ? 'bg-[#1c1c1e] text-white' 
-                          : 'bg-[#e5e5ea] text-slate-400'
-                      }`}
-                    style={item.active ? { backgroundColor: scoreColorHex } : {}}
-                  >
-                    {item.date}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Primary Score */}
-            <div className="simple-card p-6 md:p-8 flex justify-between items-end flex-1">
-              <div>
-                <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Security Score</p>
-                <div className="flex items-baseline gap-1 mb-2">
-                  <span className="text-[48px] md:text-[64px] font-black tracking-tighter leading-none">{hasScanned ? score : '-'}</span>
-                  {hasScanned && <span className="text-xl md:text-2xl font-bold text-slate-400">/100</span>}
-                </div>
-                <p className="text-sm font-semibold text-slate-500">
-                  {hasScanned ? <span>This week <span style={{ color: scoreColorHex }}>{trend} ↑</span></span> : <span>Scan pending</span>}
-                </p>
-              </div>
-              
-              {/* Mini Bar Chart Mock */}
-              <div className="flex items-end gap-2 md:gap-2.5 h-20 md:h-24 pb-1">
-                {generateTimeline(data.historicalScores || []).map((item, idx) => (
-                  <div 
-                    key={idx}
-                    className={`w-[6px] md:w-2 rounded-full transition-all duration-1000 ${
-                      item.active 
-                        ? '' // we'll use inline style for active color
-                        : item.hasData 
-                          ? 'bg-slate-300' 
-                          : 'bg-[#f1f1f3]'
-                    }`}
-                    style={{ 
-                      height: item.hasData ? `${Math.max(10, item.score)}%` : '10%',
-                      ...(item.active ? { backgroundColor: scoreColorHex } : {})
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-
+        <button 
+          onClick={onRunCheckup}
+          className="cyber-card p-4 flex flex-col items-start gap-1 justify-center relative group overflow-hidden"
+        >
+          <div className="absolute top-2 right-2 p-1 opacity-50 group-hover:opacity-100 transition-opacity">
+            <Zap size={18} className="text-cyber-neon" />
           </div>
+          <span className="text-cyber-neon font-sans font-semibold text-sm">Scan</span>
+          <span className="text-cyber-textMuted text-[10px] md:text-xs leading-tight w-[80%] text-left">
+            Analyze device security
+          </span>
+        </button>
 
-            <div className="simple-card p-5 pb-4 bg-white flex flex-col justify-between order-2 lg:order-1">
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <h3 className="font-marker font-bold text-slate-900 text-lg mb-1">7-Day Posture</h3>
-                  <p className="text-xs font-hand font-bold text-slate-500 uppercase tracking-wider">Device Score Trend</p>
-                </div>
-                <div className="flex items-center gap-1.5 px-3 py-1 bg-green-100 text-green-800 rounded-full border-2 border-slate-800 shadow-[2px_2px_0px_0px_rgba(22,101,52,1)]">
-                  <TrendingUp size={14} className="stroke-[3]" />
-                  <span className="text-sm font-hand font-bold tracking-wide">Growing</span>
-                </div>
-              </div>
-              
-              <div className="h-40 w-full mb-2">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={scoreColorHex} stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor={scoreColorHex} stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                    <XAxis 
-                      dataKey="date" 
-                      axisLine={false} 
-                      tickLine={false} 
-                      tick={{fontSize: 12, fill: '#64748b', fontFamily: '"Patrick Hand", cursive'}} 
-                      dy={10}
-                    />
-                    <YAxis 
-                      domain={[0, 100]} 
-                      axisLine={false} 
-                      tickLine={false} 
-                      tick={{fontSize: 12, fill: '#64748b', fontFamily: '"Patrick Hand", cursive'}}
-                      dx={-10}
-                    />
-                    <Tooltip 
-                      contentStyle={{ borderRadius: '12px', border: '2px solid #1e293b', boxShadow: '4px 4px 0px 0px rgba(30,41,59,1)', fontFamily: '"Patrick Hand", cursive', fontWeight: 'bold' }}
-                      itemStyle={{ color: scoreColorHex, fontWeight: 'bold' }}
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="score" 
-                      stroke={scoreColorHex} 
-                      strokeWidth={3}
-                      fillOpacity={1} 
-                      fill="url(#colorScore)" 
-                      animationDuration={1500}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-            {deviceInfo && (
-              <div className="simple-card p-6">
-                <p className="text-xs font-hand font-bold text-slate-500 uppercase tracking-widest mb-2">OS Status</p>
-                <div className="flex items-center justify-between">
-                  <span className="font-marker font-bold">Android {deviceInfo.osVersion}</span>
-                  <span className={`text-xs font-bold px-2 py-1 rounded ${deviceInfo.isOutdated ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                    {deviceInfo.isOutdated ? 'Outdated' : 'Secure'}
-                  </span>
-                </div>
-              </div>
-            )}
+        <button 
+          onClick={onRunHabitsCheckup}
+          className="cyber-card p-4 flex flex-col items-start gap-1 justify-center relative group overflow-hidden"
+        >
+          <div className="absolute top-2 right-2 p-1 opacity-50 group-hover:opacity-100 transition-opacity">
+            <ShieldCheck size={18} className="text-cyber-neon" />
           </div>
+          <span className="text-cyber-neon font-sans font-semibold text-sm">Habits</span>
+          <span className="text-cyber-textMuted text-[10px] md:text-xs leading-tight w-[80%] text-left">
+            Update security posture
+          </span>
+        </button>
 
-          <div className="lg:col-span-4 flex flex-col gap-6 md:gap-8">
-            <div className="simple-card overflow-hidden order-1 lg:order-2 flex-1 flex flex-col justify-center relative p-8 md:p-10">
-              <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, black 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
-              <div className="flex flex-col items-center justify-center z-10 w-full h-full">
-                <div className="relative w-48 h-48 md:w-56 md:h-56 lg:w-64 lg:h-64 mb-6">
-                  <svg className="w-full h-full transform -rotate-90 filter drop-shadow-md" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="42" fill="none" stroke="#e2e8f0" strokeWidth="6" strokeLinecap="round" />
-                    <circle cx="50" cy="50" r="42" fill="none" stroke={scoreColorHex} strokeWidth="6" strokeLinecap="round" strokeDasharray={`${hasScanned ? (score / 100) * 264 : 0} 264`} className="transition-all duration-1500 ease-out" />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-[56px] md:text-[64px] lg:text-[72px] font-marker font-bold leading-none tracking-tighter" style={{ color: scoreColorHex }}>
-                      {hasScanned ? score : '--'}
-                    </span>
-                    <span className="text-sm font-hand font-bold text-slate-500 uppercase tracking-widest mt-1">
-                      {hasScanned ? 'Score' : 'Unscanned'}
-                    </span>
-                  </div>
-                </div>
-                <div className="text-center w-full mt-4">
-                  <h2 className="text-2xl font-marker font-bold text-slate-900 mb-2">
-                    {hasScanned ? 'Security Score' : 'Action Required'}
-                  </h2>
-                  <p className="text-base font-hand text-slate-600 max-w-sm mx-auto">
-                    {hasScanned ? 'Your device security posture based on recent scans.' : 'Run a checkup to assess your device security posture.'}
-                  </p>
-                  {!hasScanned && (
-                    <button onClick={() => navigate('/issues')} className="simple-button mt-6 w-full max-w-[200px] mx-auto py-3 px-6 flex items-center justify-center gap-2">
-                      <Zap size={20} className="fill-yellow-400 stroke-yellow-400" />
-                      Start Checkup
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
+        <button 
+          onClick={() => {}}
+          className="cyber-card p-4 flex flex-col items-start gap-1 justify-center relative group overflow-hidden opacity-50 cursor-not-allowed"
+        >
+          <div className="absolute top-2 right-2 p-1">
+            <Globe size={18} className="text-cyber-neon" />
           </div>
+          <span className="text-cyber-neon font-sans font-semibold text-sm">Network</span>
+          <span className="text-cyber-textMuted text-[10px] md:text-xs leading-tight w-[80%] text-left">
+            Check connection safety
+          </span>
+        </button>
 
-          <div className="lg:col-span-3 flex flex-col gap-6 md:gap-8">
-            <div className="simple-card p-6 flex flex-col justify-between flex-1 min-h-[160px]">
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <Smartphone size={20} className="text-slate-900" />
-                  <h3 className="text-lg md:text-xl font-black leading-tight text-slate-900">Scan Device</h3>
-                </div>
-                <p className="text-xs md:text-sm font-medium text-slate-500 mt-2">Run an automated sweep of your device, network, and apps.</p>
-              </div>
-              <button onClick={onRunCheckup} className="mt-6 w-full simple-button py-3 text-sm">Start Scan</button>
-            </div>
-            <div className="simple-card p-6 flex flex-col justify-between flex-1 min-h-[160px]">
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <ShieldCheck size={20} className="text-[#ff6b52]" />
-                  <h3 className="text-lg md:text-xl font-black leading-tight text-slate-900">Security Habits</h3>
-                </div>
-                <p className="text-xs md:text-sm font-medium text-slate-500 mt-2">Assess your human security vulnerabilities.</p>
-              </div>
-              <button onClick={onRunHabitsCheckup} className="mt-6 w-full simple-button py-3 text-sm">Answer Questions</button>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

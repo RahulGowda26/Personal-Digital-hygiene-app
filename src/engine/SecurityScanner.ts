@@ -318,7 +318,7 @@ export class SecurityScanner {
           const diffDays = (Date.now() - patchDate.getTime()) / (1000 * 60 * 60 * 24);
           if (diffDays > 365) {
             issues.push(`Security patch is severely outdated (${signals.securityPatch})`);
-            if (status === 'safe' || status === 'info') status = 'low';
+            if (status === 'safe') status = 'low';
           } else if (diffDays > 180) {
             issues.push(`Security patch is older than 6 months (${signals.securityPatch})`);
             if (status === 'safe') status = 'info';

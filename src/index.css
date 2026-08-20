@@ -4,21 +4,29 @@
 
 @layer base {
   body {
-    @apply bg-paper-50 text-slate-900 antialiased selection:bg-slate-900 selection:text-white font-sans;
-  }
-  
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-marker tracking-wide;
+    @apply bg-cyber-bg text-cyber-text antialiased selection:bg-cyber-neon selection:text-white font-sans;
+    background-image: linear-gradient(rgba(18, 18, 18, 0) 50%, rgba(0, 0, 0, 0.4) 50%), linear-gradient(90deg, rgba(255, 42, 66, 0.03), rgba(0, 0, 0, 0), rgba(255, 42, 66, 0.03));
+    background-size: 100% 4px, 3px 100%;
   }
 }
 
 @layer utilities {
-  .simple-card {
-    @apply bg-white border-2 border-slate-800 rounded-xl shadow-[4px_4px_0px_0px_rgba(30,41,59,1)];
+  .cyber-card {
+    @apply bg-cyber-surface/80 backdrop-blur-md border border-cyber-neon/30 rounded-2xl shadow-[0_0_15px_rgba(255,42,66,0.15)] transition-all;
   }
   
-  .simple-button {
-    @apply bg-slate-900 text-white font-hand text-xl hover:bg-slate-800 rounded-lg transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)];
+  .cyber-card:hover {
+    @apply border-cyber-neon/60 shadow-[0_0_20px_rgba(255,42,66,0.3)];
+  }
+
+  .cyber-button {
+    @apply bg-gradient-to-r from-cyber-neonDark to-cyber-neon text-white font-sans font-semibold rounded-full transition-all active:scale-95 shadow-[0_0_20px_rgba(255,42,66,0.4)] flex items-center justify-center gap-2;
+  }
+  
+  .text-outline-glow {
+    -webkit-text-stroke: 1px rgba(255, 42, 66, 0.3);
+    color: transparent;
+    text-shadow: 0 0 20px rgba(255, 42, 66, 0.2);
   }
 }
 

@@ -11,6 +11,7 @@ import { SettingsScreen } from '@/screens/SettingsScreen';
 import { ToolsScreen } from '@/screens/ToolsScreen';
 import { VaultScreen } from '@/screens/VaultScreen';
 import { SecurityHabitsScreen } from '@/screens/SecurityHabitsScreen';
+import { DiagnosticsScreen } from '@/screens/DiagnosticsScreen';
 import { FullPageLoader } from '@/components/ui/Spinner';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { Capacitor } from '@capacitor/core';
@@ -72,7 +73,8 @@ function Root() {
       {tab === 'tools' && <ToolsScreen />}
       {tab === 'vault' && <VaultScreen />}
       {tab === 'learn' && <LearnScreen />}
-      {tab === 'settings' && <SettingsScreen />}
+      {tab === 'settings' && <SettingsScreen onOpenDiagnostics={() => setTab('diagnostics')} />}
+      {tab === 'diagnostics' && <DiagnosticsScreen onBack={() => setTab('settings')} />}
     </AppShell>
   );
 }

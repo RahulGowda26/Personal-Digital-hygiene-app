@@ -126,178 +126,234 @@ export function VaultScreen() {
     setMasterPassword('');
   };
 
-  if (!isUnlocked) {
-    return (
-      <div className="w-full pb-24 md:pb-8 text-slate-900 font-sans flex items-center justify-center min-h-[80vh]">
-        <Card className="w-full max-w-md p-8 rounded-[32px] border-slate-100 shadow-sm bg-white">
-          <div className="flex flex-col items-center text-center mb-8">
-            <div className="w-16 h-16 bg-slate-900 text-white rounded-2xl flex items-center justify-center mb-4">
-              <Lock size={32} />
-            </div>
-            <h1 className="text-2xl font-bold">{hasVault ? 'Unlock Vault' : 'Setup Vault'}</h1>
-            <p className="text-sm text-slate-500 mt-2">
-              {hasVault 
-                ? 'Enter your master password to decrypt your credentials. This happens locally on your device.' 
-                : 'Create a master password to encrypt your vault. It cannot be recovered if lost.'}
-            </p>
-          </div>
-
-          <form onSubmit={hasVault ? handleUnlock : handleSetup} className="space-y-4">
-            <div>
-              <input
-                type="password"
-                placeholder="Master Password"
-                value={masterPassword}
-                onChange={e => setMasterPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
-              />
-            </div>
-            
-            {!hasVault && (
-              <div>
-                <input
-                  type="password"
-                  placeholder="Confirm Master Password"
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
-                />
-              </div>
-            )}
-
-            {authError && <p className="text-red-500 text-sm font-medium">{authError}</p>}
-
-            <Button type="submit" disabled={isProcessing || !masterPassword} className="w-full py-6 text-base font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-xl">
-              {isProcessing ? 'Processing...' : hasVault ? 'Unlock' : 'Create Vault'}
-            </Button>
-          </form>
-        </Card>
-      </div>
-    );
-  }
 
   return (
-    <div className="w-full pb-24 md:pb-8 text-slate-900 font-sans">
+    <div className="w-full pb-24 md:pb-8 text-cyber-text font-sans relative">
       <div className="w-full pt-2 md:pt-4">
         
         {/* Header */}
-        <div className="flex justify-between items-center mb-8 md:mb-10">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2">Password Vault</h1>
-            <p className="text-slate-500 font-medium flex items-center gap-2">
-              <ShieldCheck size={16} className="text-emerald-500" />
-              End-to-end encrypted locally
-            </p>
-          </div>
-          <button 
-            onClick={handleLock}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-full font-semibold transition-colors"
-          >
-            <Lock size={16} />
-            <span className="hidden md:inline">Lock Vault</span>
-          </button>
+        <div className="mb-8 md:mb-10">
+          <h1 className="text-3xl md:text-4xl font-outline font-bold tracking-widest uppercase text-white mb-2 shadow-cyber">Secure Vault</h1>
+          <p className="text-cyber-textMuted font-medium font-mono text-sm uppercase tracking-wide">Encrypted zero-knowledge storage</p>
         </div>
 
-        {isAdding ? (
-          <Card className="p-6 md:p-8 rounded-[32px] border-slate-100 shadow-sm bg-white mb-8">
-            <h2 className="text-xl font-bold mb-6">Add Credential</h2>
-            <form onSubmit={handleAddCredential} className="space-y-4 max-w-lg">
-              <div>
-                <label className="block text-sm font-semibold mb-1">Website or App Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Netflix, Github"
-                  value={newName}
-                  onChange={e => setNewName(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900"
-                />
+        {!hasVault ? (
+          <Card className="max-w-md mx-auto p-8 rounded-[24px] border border-cyber-neon/20 shadow-[0_0_20px_rgba(255,42,66,0.1)] bg-cyber-surface text-center relative overflow-hidden group">
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,42,66,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,42,66,0.05)_1px,transparent_1px)] bg-[size:30px_30px] opacity-20 group-hover:opacity-40 transition-opacity" />
+            <div className="relative z-10">
+              <div className="w-16 h-16 bg-cyber-bg border border-cyber-neon/30 text-cyber-neon rounded-xl flex items-center justify-center mx-auto mb-6 shadow-[0_0_15px_rgba(255,42,66,0.2)]">
+                <Lock size={32} className="stroke-[2.5]" />
               </div>
-              <div>
-                <label className="block text-sm font-semibold mb-1">Username / Email</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="name@example.com"
-                  value={newUsername}
-                  onChange={e => setNewUsername(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold mb-1 flex justify-between">
-                  Password
-                  <button type="button" onClick={() => setNewPassword(generatePassword(16))} className="text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
-                    <RefreshCw size={14} /> Generate
-                  </button>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Password"
-                  value={newPassword}
-                  onChange={e => setNewPassword(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 font-mono"
-                />
-              </div>
-              <div className="flex gap-3 pt-4">
-                <Button type="button" variant="outline" onClick={() => setIsAdding(false)} className="flex-1">Cancel</Button>
-                <Button type="submit" className="flex-1 bg-slate-900 hover:bg-slate-800 text-white">Save</Button>
-              </div>
-            </form>
-          </Card>
-        ) : (
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold">{credentials.length} Saved Credentials</h2>
-            <Button onClick={() => setIsAdding(true)} className="bg-slate-900 text-white hover:bg-slate-800 rounded-full flex items-center gap-2 pr-5">
-              <Plus size={18} /> Add New
-            </Button>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {credentials.map(cred => (
-            <Card key={cred.id} className="p-5 rounded-[24px] border-slate-100 shadow-sm bg-white hover:shadow-md transition-shadow">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700">
-                  <KeySquare size={20} />
-                </div>
-                <h3 className="font-bold text-lg truncate">{cred.name}</h3>
-              </div>
+              <h2 className="text-xl font-bold text-white mb-2 tracking-wide font-outline uppercase">Initialize Vault</h2>
+              <p className="text-xs font-mono text-cyber-textMuted mb-8 leading-relaxed">
+                Your vault is encrypted locally using AES-GCM. We never see or store your master password. If you lose it, your data is gone forever.
+              </p>
               
-              <div className="space-y-3">
-                <div className="flex items-center justify-between bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                  <div className="overflow-hidden">
-                    <p className="text-xs text-slate-500 font-semibold mb-0.5">Username</p>
-                    <p className="text-sm truncate font-medium">{cred.username}</p>
-                  </div>
-                  <button onClick={() => handleCopy(cred.username, `${cred.id}-user`)} className="p-2 text-slate-400 hover:text-slate-900 transition-colors">
-                    {copiedId === `${cred.id}-user` ? <CheckCircle2 size={16} className="text-emerald-500" /> : <Copy size={16} />}
-                  </button>
+              <form onSubmit={handleSetup} className="space-y-4 text-left">
+                <div>
+                  <label className="block text-xs font-bold font-mono text-cyber-neon/80 uppercase mb-2">Master Password</label>
+                  <input
+                    type="password"
+                    value={masterPassword}
+                    onChange={(e) => setMasterPassword(e.target.value)}
+                    className="w-full px-4 py-3 bg-cyber-bg/80 border border-cyber-neon/30 rounded-xl focus:outline-none focus:ring-1 focus:ring-cyber-neon focus:border-cyber-neon text-white font-mono transition-all"
+                    placeholder="Minimum 8 characters"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold font-mono text-cyber-neon/80 uppercase mb-2">Confirm Password</label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full px-4 py-3 bg-cyber-bg/80 border border-cyber-neon/30 rounded-xl focus:outline-none focus:ring-1 focus:ring-cyber-neon focus:border-cyber-neon text-white font-mono transition-all"
+                    placeholder="Repeat master password"
+                  />
                 </div>
                 
-                <div className="flex items-center justify-between bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                  <div className="overflow-hidden">
-                    <p className="text-xs text-slate-500 font-semibold mb-0.5">Password</p>
-                    <p className="text-sm truncate font-mono text-slate-400">••••••••••••</p>
-                  </div>
-                  <button onClick={() => handleCopy(cred.password, `${cred.id}-pass`)} className="p-2 text-slate-400 hover:text-slate-900 transition-colors">
-                    {copiedId === `${cred.id}-pass` ? <CheckCircle2 size={16} className="text-emerald-500" /> : <Copy size={16} />}
-                  </button>
+                {authError && <p className="text-red-400 text-xs font-mono mt-2">{authError}</p>}
+                
+                <Button 
+                  type="submit" 
+                  disabled={isProcessing || !masterPassword || !confirmPassword}
+                  className="w-full mt-6 bg-cyber-neon/10 text-cyber-neon hover:bg-cyber-neon hover:text-cyber-bg border border-cyber-neon/50 disabled:opacity-50 flex items-center justify-center gap-2 px-6 rounded-lg shadow-[0_0_15px_rgba(255,42,66,0.2)] uppercase tracking-widest font-bold text-xs h-12"
+                >
+                  {isProcessing ? 'Encrypting...' : 'Create Vault'}
+                </Button>
+              </form>
+            </div>
+          </Card>
+        ) : !isUnlocked ? (
+          <Card className="max-w-md mx-auto p-8 rounded-[24px] border border-cyber-neon/20 shadow-[0_0_20px_rgba(255,42,66,0.1)] bg-cyber-surface text-center relative overflow-hidden group">
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,42,66,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,42,66,0.05)_1px,transparent_1px)] bg-[size:30px_30px] opacity-20 group-hover:opacity-40 transition-opacity" />
+            <div className="relative z-10">
+              <div className="w-16 h-16 bg-cyber-bg border border-cyber-neon/30 text-cyber-neon rounded-xl flex items-center justify-center mx-auto mb-6 shadow-[0_0_15px_rgba(255,42,66,0.2)]">
+                <Lock size={32} className="stroke-[2.5]" />
+              </div>
+              <h2 className="text-xl font-bold text-white mb-2 tracking-wide font-outline uppercase">Vault Locked</h2>
+              <p className="text-xs font-mono text-cyber-textMuted mb-8">Enter your master password to decrypt.</p>
+              
+              <form onSubmit={handleUnlock} className="space-y-4 text-left">
+                <div>
+                  <input
+                    type="password"
+                    value={masterPassword}
+                    onChange={(e) => setMasterPassword(e.target.value)}
+                    className="w-full px-4 py-3 bg-cyber-bg/80 border border-cyber-neon/30 rounded-xl focus:outline-none focus:ring-1 focus:ring-cyber-neon focus:border-cyber-neon text-white font-mono text-center tracking-widest transition-all"
+                    placeholder="• • • • • • • •"
+                    autoFocus
+                  />
+                </div>
+                
+                {authError && <p className="text-red-400 text-xs font-mono mt-2 text-center">{authError}</p>}
+                
+                <Button 
+                  type="submit" 
+                  disabled={isProcessing || !masterPassword}
+                  className="w-full mt-4 bg-cyber-neon/10 text-cyber-neon hover:bg-cyber-neon hover:text-cyber-bg border border-cyber-neon/50 disabled:opacity-50 flex items-center justify-center gap-2 px-6 rounded-lg shadow-[0_0_15px_rgba(255,42,66,0.2)] uppercase tracking-widest font-bold text-xs h-12"
+                >
+                  {isProcessing ? 'Decrypting...' : 'Unlock Vault'}
+                </Button>
+              </form>
+            </div>
+          </Card>
+        ) : (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center bg-cyber-surface/50 border border-cyber-neon/20 p-4 rounded-xl relative overflow-hidden group">
+              <div className="absolute inset-0 bg-[linear-gradient(rgba(255,42,66,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,42,66,0.05)_1px,transparent_1px)] bg-[size:30px_30px] opacity-10 group-hover:opacity-20 transition-opacity" />
+              <div className="flex items-center gap-3 relative z-10">
+                <div className="w-10 h-10 bg-cyber-bg border border-cyber-neon/30 text-cyber-neon rounded-lg flex items-center justify-center shadow-[0_0_10px_rgba(255,42,66,0.2)]">
+                  <Unlock size={20} className="stroke-[2.5]" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white uppercase tracking-wide">Vault Unlocked</h3>
+                  <p className="text-xs font-mono text-emerald-400 mt-0.5">AES-GCM ENCRYPTED</p>
                 </div>
               </div>
-            </Card>
-          ))}
-          
-          {!isAdding && credentials.length === 0 && (
-            <div className="col-span-full py-12 text-center text-slate-500">
-              <KeySquare size={48} className="mx-auto text-slate-300 mb-4" />
-              <p className="font-medium text-lg text-slate-600">Your vault is empty</p>
-              <p className="text-sm">Add a credential to safely store it.</p>
+              <Button 
+                onClick={() => setIsAdding(!isAdding)}
+                className="relative z-10 bg-cyber-neon/10 text-cyber-neon hover:bg-cyber-neon hover:text-cyber-bg border border-cyber-neon/50 rounded-lg flex items-center gap-2 px-4 h-10 uppercase tracking-widest font-bold text-[10px]"
+              >
+                {isAdding ? 'Cancel' : <><Plus size={16} /> Add New</>}
+              </Button>
             </div>
-          )}
-        </div>
 
+            {isAdding && (
+              <Card className="p-6 rounded-[24px] border border-cyber-neon/20 bg-cyber-surface shadow-[0_0_20px_rgba(255,42,66,0.1)] relative z-10">
+                <h3 className="text-lg font-bold text-white mb-4 uppercase tracking-wide font-outline">New Credential</h3>
+                <form onSubmit={handleAddCredential} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold font-mono text-cyber-neon/80 uppercase mb-2">Service Name</label>
+                      <input
+                        type="text"
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-cyber-bg/80 border border-cyber-neon/30 rounded-xl focus:outline-none focus:ring-1 focus:ring-cyber-neon focus:border-cyber-neon text-white font-mono transition-all"
+                        placeholder="e.g. Netflix"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold font-mono text-cyber-neon/80 uppercase mb-2">Username / Email</label>
+                      <input
+                        type="text"
+                        value={newUsername}
+                        onChange={(e) => setNewUsername(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-cyber-bg/80 border border-cyber-neon/30 rounded-xl focus:outline-none focus:ring-1 focus:ring-cyber-neon focus:border-cyber-neon text-white font-mono transition-all"
+                        placeholder="user@example.com"
+                        required
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-bold font-mono text-cyber-neon/80 uppercase mb-2">Password</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="flex-1 px-4 py-2.5 bg-cyber-bg/80 border border-cyber-neon/30 rounded-xl focus:outline-none focus:ring-1 focus:ring-cyber-neon focus:border-cyber-neon text-white font-mono transition-all"
+                        placeholder="Password"
+                        required
+                      />
+                      <Button
+                        type="button"
+                        onClick={handleGeneratePassword}
+                        className="bg-cyber-surface border border-cyber-neon/20 hover:border-cyber-neon/50 text-cyber-textMuted hover:text-cyber-neon px-4 rounded-xl flex items-center justify-center transition-colors"
+                        title="Generate strong password"
+                      >
+                        <RefreshCw size={18} />
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-end pt-2">
+                    <Button 
+                      type="submit" 
+                      className="bg-cyber-neon/10 text-cyber-neon hover:bg-cyber-neon hover:text-cyber-bg border border-cyber-neon/50 flex items-center gap-2 px-6 rounded-lg uppercase tracking-widest font-bold text-xs h-10 transition-all shadow-[0_0_10px_rgba(255,42,66,0.2)]"
+                    >
+                      <Lock size={16} />
+                      Save Securely
+                    </Button>
+                  </div>
+                </form>
+              </Card>
+            )}
+
+            {credentials.length === 0 && !isAdding ? (
+              <div className="py-16 text-center border-2 border-dashed border-cyber-neon/10 rounded-[24px] bg-cyber-surface/30">
+                <div className="w-16 h-16 bg-cyber-bg border border-cyber-neon/20 text-cyber-textMuted rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <KeySquare size={32} />
+                </div>
+                <h3 className="text-lg font-bold text-white uppercase tracking-wider mb-2 font-outline">Vault is Empty</h3>
+                <p className="text-cyber-textMuted max-w-sm mx-auto font-mono text-xs">
+                  Add your first credential to store it securely on your device.
+                </p>
+                <Button 
+                  onClick={() => setIsAdding(true)}
+                  className="mt-6 bg-cyber-neon/10 text-cyber-neon hover:bg-cyber-neon hover:text-cyber-bg border border-cyber-neon/50 rounded-lg inline-flex items-center gap-2 px-6 h-10 uppercase tracking-widest font-bold text-xs shadow-[0_0_15px_rgba(255,42,66,0.2)]"
+                >
+                  <Plus size={16} /> Add Credential
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {credentials.map((cred) => (
+                  <Card key={cred.id} className="p-5 rounded-[20px] border border-cyber-neon/20 shadow-[0_0_15px_rgba(255,42,66,0.05)] bg-cyber-surface flex flex-col hover:border-cyber-neon/40 transition-colors">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h4 className="font-bold text-lg text-white font-outline uppercase tracking-wide">{cred.name}</h4>
+                        <p className="text-sm text-cyber-textMuted font-mono mt-0.5 truncate max-w-[200px]">{cred.username}</p>
+                      </div>
+                      <div className="w-8 h-8 rounded-lg bg-cyber-bg border border-cyber-neon/30 flex items-center justify-center text-cyber-neon shrink-0">
+                        <KeySquare size={16} />
+                      </div>
+                    </div>
+                    
+                    <div className="mt-auto pt-4 border-t border-cyber-neon/10 flex justify-between items-center">
+                      <div className="font-mono text-lg text-cyber-neon/50 tracking-[0.2em] select-none">
+                        ••••••••
+                      </div>
+                      <button
+                        onClick={() => copyPassword(cred.password, cred.id)}
+                        className={`p-2 rounded-lg transition-colors border ${
+                          copiedId === cred.id 
+                            ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50' 
+                            : 'bg-cyber-bg text-cyber-textMuted hover:text-cyber-neon hover:border-cyber-neon/50 border-cyber-neon/20'
+                        }`}
+                        title="Copy Password"
+                      >
+                        {copiedId === cred.id ? <CheckCircle2 size={18} /> : <Copy size={18} />}
+                      </button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

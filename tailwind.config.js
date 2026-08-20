@@ -4,27 +4,26 @@ export default {
   theme: {
     extend: {
       colors: {
-        theme: {
-          1: '#E6223A',
-          2: '#690722',
-          3: '#621D43',
-          4: '#644765',
-          5: '#374365',
-          6: '#062A48',
-          7: '#03213D',
-        },
-        paper: {
-          50: '#fdfdfb',
-          100: '#f9f9f6',
-          200: '#f1f1e8',
-          300: '#e5e5d3',
-          400: '#d5d5b7',
+        cyber: {
+          bg: '#121212',
+          surface: '#18181b',
+          surface2: '#27272a',
+          neon: '#ff2a42',
+          neonDark: '#cc1e32',
+          text: '#f4f4f5',
+          textMuted: '#a1a1aa'
         }
       },
       fontFamily: {
-        hand: ['"Patrick Hand"', 'cursive'],
-        marker: ['"Kalam"', 'cursive'],
         sans: ['Inter', 'sans-serif'],
+        outline: ['Oswald', 'sans-serif'],
+        cursive: ['"Great Vibes"', 'cursive'],
+      },
+      backgroundImage: {
+        'scanline': 'linear-gradient(rgba(18, 18, 18, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06))',
+      },
+      backgroundSize: {
+        'scanline-size': '100% 4px, 3px 100%',
       }
     },
   },
