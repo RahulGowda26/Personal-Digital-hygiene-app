@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Shield, ShieldAlert, ShieldCheck, Activity, Terminal, Server } from 'lucide-react';
+import { Shield, ShieldAlert, ShieldCheck, Activity, Terminal, Server, Search } from 'lucide-react';
 
 interface PortResult {
   port: number;

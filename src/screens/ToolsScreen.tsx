@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/Button';
 import { checkPasswordBreach } from '@/lib/hibp';
 import { analyzeLink, type LinkAnalysisResult } from '@/lib/urlScanner';
 import { PortScannerCard } from '@/components/tools/PortScannerCard';
-
+import { IdentityScannerCard } from '@/components/tools/IdentityScannerCard';
+import { WifiAnalyzerCard } from '@/components/tools/WifiAnalyzerCard';
+import { AppPermissionsCard } from '@/components/tools/AppPermissionsCard';
 export function ToolsScreen() {
   const [password, setPassword] = useState('');
   const [isCheckingPassword, setIsCheckingPassword] = useState(false);
@@ -231,6 +233,10 @@ export function ToolsScreen() {
               </Button>
             </div>
           </Card>
+
+          <IdentityScannerCard />
+          <WifiAnalyzerCard />
+          <AppPermissionsCard />
 
         </div>
       </div>

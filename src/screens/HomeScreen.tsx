@@ -16,6 +16,7 @@ import { CenteredLoader, ErrorState } from '@/components/ui/Spinner';
 import { userFacingError } from '@/lib/errors';
 import { SentinelDeviceScanner } from '@/platform/capacitor/DeviceScannerBridge';
 import { Capacitor } from '@capacitor/core';
+import { ThreatFeedWidget } from '@/components/dashboard/ThreatFeedWidget';
 
 interface DeviceInfo {
   osVersion: string;
@@ -224,6 +225,140 @@ export function HomeScreen({
         </button>
 
       </div>
+
+      <ThreatFeedWidget />
+
+      {/* Action Required Banner */}
+      {score > 0 && score < 90 && (
+        <div className="w-full max-w-md mt-6 px-4 z-10">
+          <div className="bg-cyber-surface/80 border-l-4 border-cyber-neon p-4 rounded-r-xl shadow-[0_0_15px_rgba(255,42,66,0.1)] relative overflow-hidden group cursor-pointer" onClick={onViewIssues}>
+            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,42,66,0.1)_1px,transparent_1px)] bg-[size:20px_20px] opacity-20 group-hover:opacity-40 transition-opacity" />
+            <div className="relative z-10 flex items-center justify-between">
+              <div>
+                <h4 className="text-white font-outline uppercase tracking-wider text-sm mb-1 flex items-center gap-2">
+                  <AlertTriangle size={14} className="text-cyber-neon" />
+                  Action Required
+                </h4>
+                <p className="text-cyber-textMuted font-mono text-[10px] uppercase tracking-wide">
+                  Vulnerabilities detected. Review required.
+                </p>
+              </div>
+              <div className="text-cyber-neon bg-cyber-neon/10 p-2 rounded-lg">
+                <TrendingUp size={20} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* System Status / Provenance Meter */}
+      <div className="w-full max-w-md mt-8 px-4 z-10">
+        <h3 className="text-cyber-neon font-mono text-[10px] uppercase tracking-[0.2em] mb-4 pl-2 border-l border-cyber-neon/50">System Status</h3>
+        <div className="bg-cyber-surface/50 border border-cyber-neon/20 p-4 rounded-[20px] flex flex-col gap-4">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-cyber-bg border border-cyber-neon/30 flex items-center justify-center text-cyber-neon">
+                <Smartphone size={16} />
+              </div>
+              <div>
+                <p className="text-white font-bold text-xs uppercase tracking-wide">Device Integrity</p>
+                <p className="text-cyber-textMuted font-mono text-[9px] uppercase">Hardware backed</p>
+              </div>
+            </div>
+            <div className="text-emerald-400 font-mono text-xs font-bold bg-emerald-950/30 px-2 py-1 rounded border border-emerald-500/30">
+              SECURE
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-cyber-bg border border-cyber-neon/30 flex items-center justify-center text-cyber-neon">
+                <AppWindow size={16} />
+              </div>
+              <div>
+                <p className="text-white font-bold text-xs uppercase tracking-wide">App Telemetry</p>
+                <p className="text-cyber-textMuted font-mono text-[9px] uppercase">Zero-cloud local</p>
+              </div>
+            </div>
+            <div className="text-emerald-400 font-mono text-xs font-bold bg-emerald-950/30 px-2 py-1 rounded border border-emerald-500/30">
+              PRIVATE
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-cyber-bg border border-cyber-neon/30 flex items-center justify-center text-cyber-neon">
+                <EyeOff size={16} />
+              </div>
+              <div>
+                <p className="text-white font-bold text-xs uppercase tracking-wide">Data Provenance</p>
+                <p className="text-cyber-textMuted font-mono text-[9px] uppercase">On-device evaluation</p>
+              </div>
+            </div>
+            <div className="text-emerald-400 font-mono text-xs font-bold bg-emerald-950/30 px-2 py-1 rounded border border-emerald-500/30">
+              VERIFIED
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Active Defenses & Data Privacy */}
+      <div className="w-full max-w-md mt-8 px-4 z-10 flex flex-col md:flex-row gap-4">
+        {/* Active Defenses */}
+        <div className="flex-1 bg-cyber-bg border border-cyber-neon/20 p-4 rounded-[20px] shadow-[0_0_15px_rgba(255,42,66,0.05)] relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-cyber-neon/5 rounded-full blur-2xl group-hover:bg-cyber-neon/10 transition-colors" />
+          <h3 className="text-white font-sans font-bold text-sm mb-3">Active Defenses</h3>
+          <div className="space-y-3">
+            <div>
+              <div className="flex justify-between text-[10px] font-mono text-cyber-textMuted mb-1 uppercase">
+                <span>Network Encryption</span>
+                <span className="text-emerald-400">ON</span>
+              </div>
+              <div className="h-1 w-full bg-cyber-surface rounded-full overflow-hidden">
+                <div className="h-full bg-emerald-500 w-full" />
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-[10px] font-mono text-cyber-textMuted mb-1 uppercase">
+                <span>Jailbreak Det.</span>
+                <span className="text-emerald-400">ON</span>
+              </div>
+              <div className="h-1 w-full bg-cyber-surface rounded-full overflow-hidden">
+                <div className="h-full bg-emerald-500 w-full" />
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-[10px] font-mono text-cyber-textMuted mb-1 uppercase">
+                <span>App Sandboxing</span>
+                <span className="text-emerald-400">ON</span>
+              </div>
+              <div className="h-1 w-full bg-cyber-surface rounded-full overflow-hidden">
+                <div className="h-full bg-emerald-500 w-full" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Data & Privacy Inventory */}
+        <div className="flex-1 bg-cyber-bg border border-cyber-neon/20 p-4 rounded-[20px] shadow-[0_0_15px_rgba(255,42,66,0.05)] flex flex-col justify-between relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-cyber-neon/5 rounded-full blur-2xl" />
+          <div>
+            <h3 className="text-white font-sans font-bold text-sm mb-1">Data Inventory</h3>
+            <p className="text-cyber-textMuted font-mono text-[9px] uppercase">Local telemetry only</p>
+          </div>
+          <div className="mt-4 flex gap-4">
+            <div>
+              <div className="text-2xl font-outline text-white font-bold leading-none">0</div>
+              <div className="text-cyber-textMuted font-mono text-[8px] uppercase mt-1">Cloud<br/>Syncs</div>
+            </div>
+            <div>
+              <div className="text-2xl font-outline text-cyber-neon font-bold leading-none">12</div>
+              <div className="text-cyber-textMuted font-mono text-[8px] uppercase mt-1">Local<br/>Audits</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 }
