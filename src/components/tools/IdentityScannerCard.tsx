@@ -2,39 +2,34 @@ import { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Search, Fingerprint, ShieldAlert, ShieldCheck } from 'lucide-react';
-
-interface BreachResult {
-  source: string;
-  year: string;
-  compromisedData: string[];
-}
+import { getThreatIntelligenceProvider, BreachExposure } from '@/platform/ThreatIntelligence';
 
 export function IdentityScannerCard() {
   const [email, setEmail] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [hasScanned, setHasScanned] = useState(false);
-  const [results, setResults] = useState<BreachResult[]>([]);
+  const [results, setResults] = useState<BreachExposure[]>([]);
 
-  const handleScan = () => {
+  const handleScan = async () => {
     if (!email) return;
     setIsScanning(true);
     setHasScanned(false);
     
-    // Simulate a dark web scan
-    setTimeout(() => {
-      setIsScanning(false);
-      setHasScanned(true);
-      
-      // Mock results based on email length just for demo variety
-      if (email.length > 15) {
-        setResults([
-          { source: 'LinkedIn', year: '2012', compromisedData: ['Email', 'Passwords'] },
-          { source: 'Adobe', year: '2013', compromisedData: ['Email', 'Passwords', 'Password Hints'] }
-        ]);
+    try {
+      const provider = getThreatIntelligenceProvider();
+      const res = await provider.checkAccountExposure(email);
+      if (res.status === 'breach_found') {
+        setResults(res.breaches);
       } else {
         setResults([]);
       }
-    }, 2000);
+    } catch (e) {
+      console.error(e);
+      setResults([]);
+    } finally {
+      setIsScanning(false);
+      setHasScanned(true);
+    }
   };
 
   return (
@@ -84,11 +79,11 @@ export function IdentityScannerCard() {
                   {results.map((r, i) => (
                     <div key={i} className="bg-cyber-surface p-3 rounded-lg border border-cyber-neon/10 flex justify-between items-start">
                       <div>
-                        <div className="text-white font-bold text-sm">{r.source}</div>
-                        <div className="text-cyber-textMuted text-xs mt-1">Data: {r.compromisedData.join(', ')}</div>
+                        <div className="text-white font-bold text-sm">{r.title || r.name}</div>
+                        <div className="text-cyber-textMuted text-xs mt-1">Data: {r.dataClasses?.join(', ') || 'Unknown'}</div>
                       </div>
                       <div className="text-cyber-textMuted font-mono text-xs bg-cyber-bg px-2 py-1 rounded">
-                        {r.year}
+                        {r.breachDate}
                       </div>
                     </div>
                   ))}

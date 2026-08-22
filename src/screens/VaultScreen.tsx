@@ -3,6 +3,7 @@ import { Lock, Unlock, Plus, Copy, CheckCircle2, ShieldCheck, RefreshCw, KeySqua
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { encryptData, decryptData, generatePassword, type EncryptedPayload } from '@/lib/cryptoVault';
+import { Preferences } from '@capacitor/preferences';
 
 interface Credential {
   id: string;
@@ -37,15 +38,18 @@ export function VaultScreen() {
 
   // Initialization
   useEffect(() => {
-    const storedVault = localStorage.getItem('sentinel_vault');
-    if (storedVault) {
-      setHasVault(true);
-    }
+    const checkVault = async () => {
+      const { value } = await Preferences.get({ key: 'sentinel_vault' });
+      if (value) {
+        setHasVault(true);
+      }
+    };
+    checkVault();
   }, []);
 
   const saveVault = async (data: Credential[], pwd = masterPassword) => {
     const payload = await encryptData(JSON.stringify(data), pwd);
-    localStorage.setItem('sentinel_vault', JSON.stringify(payload));
+    await Preferences.set({ key: 'sentinel_vault', value: JSON.stringify(payload) });
   };
 
   const handleSetup = async (e: React.FormEvent) => {
@@ -77,7 +81,7 @@ export function VaultScreen() {
     setIsProcessing(true);
     setAuthError('');
     try {
-      const stored = localStorage.getItem('sentinel_vault');
+      const { value: stored } = await Preferences.get({ key: 'sentinel_vault' });
       if (!stored) throw new Error('Vault missing');
       
       const payload = JSON.parse(stored) as EncryptedPayload;
@@ -126,6 +130,9 @@ export function VaultScreen() {
     setMasterPassword('');
   };
 
+  const handleGeneratePassword = () => {
+    setNewPassword(generatePassword(16));
+  };
 
   return (
     <div className="w-full pb-24 md:pb-8 text-cyber-text font-sans relative">
@@ -337,7 +344,7 @@ export function VaultScreen() {
                         ••••••••
                       </div>
                       <button
-                        onClick={() => copyPassword(cred.password, cred.id)}
+                        onClick={() => handleCopy(cred.password, cred.id)}
                         className={`p-2 rounded-lg transition-colors border ${
                           copiedId === cred.id 
                             ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50' 

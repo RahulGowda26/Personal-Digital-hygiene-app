@@ -308,25 +308,48 @@ export async function fetchHistoricalScores(userId: string): Promise<Array<{ dat
     .order('created_at', { ascending: false })
     .limit(50); // Get enough recent rows to cover a few days
     
-  if (error || !data) return [];
-  
   const historyMap = new Map<string, number>();
   
-  for (const row of data) {
-    if (!row.components) continue;
-    const deviceComponent = (row.components as any[]).find((c) => c.category === 'device_security');
-    
-    // Only accept scores generated from an actual device scan
-    if (deviceComponent && deviceComponent.coverage === 100) {
-      const dateStr = new Date(row.created_at).toISOString().split('T')[0];
-      // Keep only the most recent score for any given day
-      if (!historyMap.has(dateStr)) {
-        historyMap.set(dateStr, deviceComponent.score);
+  if (!error && data) {
+    for (const row of data) {
+      if (!row.components) continue;
+      const deviceComponent = (row.components as any[]).find((c: any) => c.category === 'device_security');
+      
+      // Only accept scores generated from an actual device scan
+      if (deviceComponent && deviceComponent.coverage === 100) {
+        const dateStr = new Date(row.created_at).toISOString().split('T')[0];
+        // Keep only the most recent score for any given day (since we iterate descending)
+        if (!historyMap.has(dateStr)) {
+          historyMap.set(dateStr, deviceComponent.score);
+        }
       }
     }
   }
+
+  // Generate the last 7 days
+  const last7Days: Array<{ date: string; score: number }> = [];
+  let lastKnownScore = 0; // Default if no data at all
   
-  return Array.from(historyMap.entries()).map(([date, score]) => ({ date, score }));
+  // Find the most recent score to use as a baseline if the earliest of the 7 days has no data
+  // We can look at the oldest entry in our map as a starting point.
+  const sortedDates = Array.from(historyMap.keys()).sort();
+  if (sortedDates.length > 0) {
+    lastKnownScore = historyMap.get(sortedDates[0]) || 0;
+  }
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().split('T')[0];
+    
+    if (historyMap.has(dateStr)) {
+      lastKnownScore = historyMap.get(dateStr)!;
+    }
+    
+    last7Days.push({ date: dateStr, score: lastKnownScore });
+  }
+  
+  return last7Days;
 }
 
 // ---------------------------------------------------------------------------

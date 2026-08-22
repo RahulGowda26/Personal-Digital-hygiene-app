@@ -14,20 +14,58 @@ export function AppPermissionsCard() {
   const [hasScanned, setHasScanned] = useState(false);
   const [riskyApps, setRiskyApps] = useState<AppPermission[]>([]);
 
-  const handleAudit = () => {
+  const handleAudit = async () => {
     setIsScanning(true);
     setHasScanned(false);
     
-    // Simulate an audit
-    setTimeout(() => {
+    try {
+      const { SecurityScanner } = await import('@/engine/SecurityScanner');
+      const scanner = new SecurityScanner();
+      const result = await scanner.getInstalledAppsAndPermissions('audit-session');
+      
+      if (result.status === 'success' && result.apps.length > 0) {
+        const risky: AppPermission[] = [];
+        
+        result.apps.forEach((app, index) => {
+          if (app.isSystemApp) return;
+          
+          const granted = app.grantedPermissions || [];
+          const risksFound: string[] = [];
+          
+          if (granted.some(p => p.includes('ACCESS_FINE_LOCATION') || p.includes('ACCESS_BACKGROUND_LOCATION'))) {
+            risksFound.push('Location');
+          }
+          if (granted.some(p => p.includes('RECORD_AUDIO'))) {
+            risksFound.push('Microphone');
+          }
+          if (granted.some(p => p.includes('CAMERA'))) {
+            risksFound.push('Camera');
+          }
+          if (granted.some(p => p.includes('READ_CONTACTS'))) {
+            risksFound.push('Contacts');
+          }
+
+          if (risksFound.length > 0) {
+            risky.push({
+              id: app.packageName || String(index),
+              name: app.appName || app.packageName,
+              risks: risksFound
+            });
+          }
+        });
+        
+        setRiskyApps(risky);
+      } else {
+        // Fallback or empty state if scan failed
+        setRiskyApps([]);
+      }
+    } catch (e) {
+      console.error('Audit failed:', e);
+      setRiskyApps([]);
+    } finally {
       setIsScanning(false);
       setHasScanned(true);
-      setRiskyApps([
-        { id: '1', name: 'SocialConnect', risks: ['Location', 'Microphone'] },
-        { id: '2', name: 'Flashlight Pro', risks: ['Location', 'Contacts', 'Camera'] },
-        { id: '3', name: 'WeatherApp', risks: ['Always-on Location'] }
-      ]);
-    }, 1500);
+    }
   };
 
   const getIcon = (risk: string) => {

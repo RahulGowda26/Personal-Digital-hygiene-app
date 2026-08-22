@@ -34,7 +34,7 @@ class NetworkScannerPlugin : Plugin() {
         android.util.Log.d("SentinelNetworkScanner", "START id=$sessionId")
 
         if (getPermissionState("location") != com.getcapacitor.PermissionState.GRANTED) {
-            requestAllPermissions(call, "permissionsCallback")
+            requestPermissionForAlias("location", call, "permissionsCallback")
             return
         } else {
             performNetworkScan(call, sessionId)
@@ -94,126 +94,128 @@ class NetworkScannerPlugin : Plugin() {
     }
 
     private fun performNetworkScan(call: PluginCall, sessionId: String) {
-        try {
-            val context: Context = this.context
-            var isVpnActive = false
-            var isProxySet = false
-            var isMetered = false
-            var isWifiConnected = false
-            var isCaptivePortal = false
-            var isOpenNetwork = false
-            var ssid: String? = null
-            var ipAddressStr: String? = null
-            var bssid: String? = null
-            var deviceCount = 0
+        Thread {
+            try {
+                val context: Context = this.context
+                var isVpnActive = false
+                var isProxySet = false
+                var isMetered = false
+                var isWifiConnected = false
+                var isCaptivePortal = false
+                var isOpenNetwork = false
+                var ssid: String? = null
+                var ipAddressStr: String? = null
+                var bssid: String? = null
+                var deviceCount = 0
 
-            // Check Proxy
-            val proxyHost = System.getProperty("http.proxyHost")
-            val proxyPort = System.getProperty("http.proxyPort")
-            if (!proxyHost.isNullOrEmpty() && !proxyPort.isNullOrEmpty()) {
-                isProxySet = true
-            }
+                // Check Proxy
+                val proxyHost = System.getProperty("http.proxyHost")
+                val proxyPort = System.getProperty("http.proxyPort")
+                if (!proxyHost.isNullOrEmpty() && !proxyPort.isNullOrEmpty()) {
+                    isProxySet = true
+                }
 
-            // Check VPN, Metered Status, and Captive Portal
-            val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                val activeNetwork = connectivityManager.activeNetwork
-                if (activeNetwork != null) {
-                    val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
-                    if (capabilities != null) {
-                        isVpnActive = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
-                        isMetered = !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
-                        isWifiConnected = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
-                        
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                            isCaptivePortal = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL)
+                // Check VPN, Metered Status, and Captive Portal
+                val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    val activeNetwork = connectivityManager.activeNetwork
+                    if (activeNetwork != null) {
+                        val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
+                        if (capabilities != null) {
+                            isVpnActive = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
+                            isMetered = !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+                            isWifiConnected = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+                            
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                isCaptivePortal = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL)
+                            }
                         }
                     }
-                }
-            } else {
-                @Suppress("DEPRECATION")
-                val activeNetworkInfo = connectivityManager.activeNetworkInfo
-                if (activeNetworkInfo != null) {
+                } else {
                     @Suppress("DEPRECATION")
-                    isVpnActive = activeNetworkInfo.type == ConnectivityManager.TYPE_VPN
-                    @Suppress("DEPRECATION")
-                    isWifiConnected = activeNetworkInfo.type == ConnectivityManager.TYPE_WIFI
-                }
-            }
-
-            // Check Wi-Fi Security
-            if (isWifiConnected) {
-                val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-                val wifiInfo: WifiInfo? = wifiManager.connectionInfo
-                
-                if (wifiInfo != null) {
-                    ssid = wifiInfo.ssid?.replace("\"", "")
-                    if (ssid == "<unknown ssid>") {
-                        ssid = null
+                    val activeNetworkInfo = connectivityManager.activeNetworkInfo
+                    if (activeNetworkInfo != null) {
+                        @Suppress("DEPRECATION")
+                        isVpnActive = activeNetworkInfo.type == ConnectivityManager.TYPE_VPN
+                        @Suppress("DEPRECATION")
+                        isWifiConnected = activeNetworkInfo.type == ConnectivityManager.TYPE_WIFI
                     }
+                }
+
+                // Check Wi-Fi Security
+                if (isWifiConnected) {
+                    val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+                    val wifiInfo: WifiInfo? = wifiManager.connectionInfo
                     
-                    bssid = wifiInfo.bssid
-                    
-                    val ipRaw = wifiInfo.ipAddress
-                    ipAddressStr = String.format(
-                        "%d.%d.%d.%d",
-                        (ipRaw and 0xff),
-                        (ipRaw shr 8 and 0xff),
-                        (ipRaw shr 16 and 0xff),
-                        (ipRaw shr 24 and 0xff)
-                    )
-                    
-                    try {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                            val currentSecurityType = wifiInfo.currentSecurityType
-                            isOpenNetwork = (currentSecurityType == WifiInfo.SECURITY_TYPE_OPEN || currentSecurityType == WifiInfo.SECURITY_TYPE_WEP)
-                        } else {
-                            @Suppress("DEPRECATION")
-                            val configuredNetworks = wifiManager.configuredNetworks
-                            if (configuredNetworks != null) {
-                                for (config in configuredNetworks) {
-                                    if (config.networkId == wifiInfo.networkId) {
-                                        @Suppress("DEPRECATION")
-                                        val allowedKeyManagement = config.allowedKeyManagement
-                                        if (allowedKeyManagement.get(android.net.wifi.WifiConfiguration.KeyMgmt.NONE)) {
-                                            isOpenNetwork = true
+                    if (wifiInfo != null) {
+                        ssid = wifiInfo.ssid?.replace("\"", "")
+                        if (ssid == "<unknown ssid>") {
+                            ssid = null
+                        }
+                        
+                        bssid = wifiInfo.bssid
+                        
+                        val ipRaw = wifiInfo.ipAddress
+                        ipAddressStr = String.format(
+                            "%d.%d.%d.%d",
+                            (ipRaw and 0xff),
+                            (ipRaw shr 8 and 0xff),
+                            (ipRaw shr 16 and 0xff),
+                            (ipRaw shr 24 and 0xff)
+                        )
+                        
+                        try {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                val currentSecurityType = wifiInfo.currentSecurityType
+                                isOpenNetwork = (currentSecurityType == WifiInfo.SECURITY_TYPE_OPEN || currentSecurityType == WifiInfo.SECURITY_TYPE_WEP)
+                            } else {
+                                @Suppress("DEPRECATION")
+                                val configuredNetworks = wifiManager.configuredNetworks
+                                if (configuredNetworks != null) {
+                                    for (config in configuredNetworks) {
+                                        if (config.networkId == wifiInfo.networkId) {
+                                            @Suppress("DEPRECATION")
+                                            val allowedKeyManagement = config.allowedKeyManagement
+                                            if (allowedKeyManagement.get(android.net.wifi.WifiConfiguration.KeyMgmt.NONE)) {
+                                                isOpenNetwork = true
+                                            }
+                                            break
                                         }
-                                        break
                                     }
                                 }
                             }
+                        } catch (e: Exception) {
+                            android.util.Log.e("SentinelNetworkScanner", "Failed to get wifi security info", e)
                         }
-                    } catch (e: Exception) {
-                        android.util.Log.e("SentinelNetworkScanner", "Failed to get wifi security info", e)
-                    }
 
-                    // Perform Ping Sweep
-                    if (ipAddressStr != "0.0.0.0") {
-                        deviceCount = getActiveDeviceCount(ipAddressStr)
+                        // Perform Ping Sweep
+                        if (ipAddressStr != "0.0.0.0") {
+                            deviceCount = getActiveDeviceCount(ipAddressStr)
+                        }
                     }
                 }
-            }
 
-            val ret = JSObject()
-            ret.put("isVpnActive", isVpnActive)
-            ret.put("isProxySet", isProxySet)
-            ret.put("isMetered", isMetered)
-            ret.put("proxyHost", proxyHost ?: "")
-            ret.put("isWifiConnected", isWifiConnected)
-            ret.put("isCaptivePortal", isCaptivePortal)
-            ret.put("isOpenNetwork", isOpenNetwork)
-            ret.put("deviceCount", deviceCount)
-            
-            if (ssid != null) ret.put("ssid", ssid)
-            if (ipAddressStr != null) ret.put("ipAddress", ipAddressStr)
-            if (bssid != null) ret.put("bssid", bssid)
-            
-            android.util.Log.d("SentinelNetworkScanner", "SUCCESS id=$sessionId")
-            call.resolve(ret)
-            
-        } catch (e: Exception) {
-            android.util.Log.e("SentinelNetworkScanner", "ERROR", e)
-            call.reject("Failed to gather network signals", e)
-        }
+                val ret = JSObject()
+                ret.put("isVpnActive", isVpnActive)
+                ret.put("isProxySet", isProxySet)
+                ret.put("isMetered", isMetered)
+                ret.put("proxyHost", proxyHost ?: "")
+                ret.put("isWifiConnected", isWifiConnected)
+                ret.put("isCaptivePortal", isCaptivePortal)
+                ret.put("isOpenNetwork", isOpenNetwork)
+                ret.put("deviceCount", deviceCount)
+                
+                if (ssid != null) ret.put("ssid", ssid)
+                if (ipAddressStr != null) ret.put("ipAddress", ipAddressStr)
+                if (bssid != null) ret.put("bssid", bssid)
+                
+                android.util.Log.d("SentinelNetworkScanner", "SUCCESS id=$sessionId")
+                call.resolve(ret)
+                
+            } catch (e: Exception) {
+                android.util.Log.e("SentinelNetworkScanner", "ERROR", e)
+                call.reject("Failed to gather network signals", e)
+            }
+        }.start()
     }
 }

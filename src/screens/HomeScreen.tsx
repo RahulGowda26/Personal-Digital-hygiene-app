@@ -212,10 +212,10 @@ export function HomeScreen({
         </button>
 
         <button 
-          onClick={() => {}}
-          className="cyber-card p-4 flex flex-col items-start gap-1 justify-center relative group overflow-hidden opacity-50 cursor-not-allowed"
+          onClick={onScanNetwork}
+          className="cyber-card p-4 flex flex-col items-start gap-1 justify-center relative group overflow-hidden"
         >
-          <div className="absolute top-2 right-2 p-1">
+          <div className="absolute top-2 right-2 p-1 opacity-50 group-hover:opacity-100 transition-opacity">
             <Globe size={18} className="text-cyber-neon" />
           </div>
           <span className="text-cyber-neon font-sans font-semibold text-sm">Network</span>

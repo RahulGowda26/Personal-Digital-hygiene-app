@@ -2,29 +2,38 @@ import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Wifi, Shield, ShieldAlert, Activity, Lock, Unlock } from 'lucide-react';
+import { SentinelNetworkScanner, NativeNetworkSignalsResponse } from '@/platform/capacitor/NetworkScannerBridge';
 
 export function WifiAnalyzerCard() {
   const [isScanning, setIsScanning] = useState(false);
   const [hasScanned, setHasScanned] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [scanResult, setScanResult] = useState<NativeNetworkSignalsResponse | null>(null);
 
-  const handleScan = () => {
+  const handleScan = async () => {
     setIsScanning(true);
     setHasScanned(false);
     setProgress(0);
     
-    // Simulate a network scan
-    const interval = setInterval(() => {
-      setProgress((p) => {
-        if (p >= 100) {
-          clearInterval(interval);
-          setIsScanning(false);
-          setHasScanned(true);
-          return 100;
-        }
-        return p + 5;
-      });
-    }, 100);
+    try {
+      const result = await SentinelNetworkScanner.getNetworkSignals({ sessionId: 'manual' });
+      setScanResult(result);
+      
+      const interval = setInterval(() => {
+        setProgress((p) => {
+          if (p >= 100) {
+            clearInterval(interval);
+            setIsScanning(false);
+            setHasScanned(true);
+            return 100;
+          }
+          return p + 10;
+        });
+      }, 50);
+    } catch (e) {
+      console.error(e);
+      setIsScanning(false);
+    }
   };
 
   return (
@@ -71,27 +80,37 @@ export function WifiAnalyzerCard() {
           </div>
         )}
 
-        {hasScanned && (
+        {hasScanned && scanResult && (
           <div className="mt-6 border-t border-cyber-neon/20 pt-6">
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="bg-cyber-surface p-4 rounded-xl border border-cyber-neon/20 flex flex-col items-center text-center">
-                <Lock size={24} className="text-emerald-400 mb-2" />
+                <Lock size={24} className={scanResult.isOpenNetwork ? "text-red-400 mb-2" : "text-emerald-400 mb-2"} />
                 <span className="text-cyber-textMuted font-mono text-[10px] uppercase">Encryption</span>
-                <span className="text-white font-bold text-sm mt-1">WPA3 Personal</span>
+                <span className="text-white font-bold text-sm mt-1">{scanResult.isOpenNetwork ? 'Open / None' : 'Secured'}</span>
               </div>
               <div className="bg-cyber-surface p-4 rounded-xl border border-cyber-neon/20 flex flex-col items-center text-center">
-                <Shield size={24} className="text-emerald-400 mb-2" />
-                <span className="text-cyber-textMuted font-mono text-[10px] uppercase">DNS Spoofing</span>
-                <span className="text-white font-bold text-sm mt-1">Not Detected</span>
+                <Shield size={24} className={scanResult.isVpnActive ? "text-emerald-400 mb-2" : "text-amber-400 mb-2"} />
+                <span className="text-cyber-textMuted font-mono text-[10px] uppercase">VPN Status</span>
+                <span className="text-white font-bold text-sm mt-1">{scanResult.isVpnActive ? 'Active' : 'Inactive'}</span>
               </div>
             </div>
 
             <div className="bg-cyber-bg border border-cyber-neon/10 rounded-xl p-4">
               <div className="flex justify-between items-center mb-3">
-                <span className="text-white text-sm font-bold">Rogue AP Detection</span>
-                <span className="text-emerald-400 text-xs font-mono bg-emerald-400/10 px-2 py-1 rounded">CLEAR</span>
+                <span className="text-white text-sm font-bold">Network Information</span>
+                <span className={scanResult.isWifiConnected ? "text-emerald-400 text-xs font-mono bg-emerald-400/10 px-2 py-1 rounded" : "text-red-400 text-xs font-mono bg-red-400/10 px-2 py-1 rounded"}>
+                   {scanResult.isWifiConnected ? "CONNECTED" : "DISCONNECTED"}
+                </span>
               </div>
-              <p className="text-cyber-textMuted text-xs">No suspicious twin networks or unexpected MAC addresses found on the local subnet.</p>
+              <p className="text-cyber-textMuted text-xs mb-1">
+                SSID: {scanResult.ssid || 'Unknown'}
+              </p>
+              <p className="text-cyber-textMuted text-xs mb-1">
+                IP: {scanResult.ipAddress || 'Unknown'}
+              </p>
+              <p className="text-cyber-textMuted text-xs">
+                Devices on subnet: {scanResult.deviceCount || 0}
+              </p>
             </div>
 
             <Button 

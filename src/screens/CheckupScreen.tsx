@@ -240,39 +240,45 @@ export function CheckupScreen({
       return (
         <div className="max-w-xl mx-auto space-y-6 pt-6 pb-20">
           <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold text-slate-900">Network Scan Complete</h2>
+            <h2 className="text-2xl font-bold text-white">Network Scan Complete</h2>
           </div>
 
-          <Card className="p-8 shadow-md border-slate-200">
+          <Card className="p-8 shadow-md border-cyber-neon/20 bg-cyber-bg">
             <div className="flex flex-col items-center mb-6">
               {networkSafe ? (
                 <ShieldCheck className="w-16 h-16 text-emerald-500 mb-2" />
               ) : (
                 <ShieldAlert className="w-16 h-16 text-amber-500 mb-2" />
               )}
-              <h3 className="text-xl font-bold text-slate-800">
+              <h3 className="text-xl font-bold text-white">
                 {networkSafe ? 'Network looks safe' : 'Network needs attention'}
               </h3>
             </div>
 
             <div className="space-y-4 w-full">
-              <div className="bg-slate-50 p-4 rounded-xl flex justify-between items-center border border-slate-100">
-                <span className="text-slate-500 font-medium flex items-center gap-2"><Smartphone className="w-4 h-4"/> Wi-Fi Name (SSID)</span>
-                <span className="font-bold text-slate-800">{ssid || 'Hidden by macOS Privacy'}</span>
+              <div className="bg-cyber-surface rounded-xl p-4 flex items-center justify-between border border-cyber-neon/20 shadow-[0_0_10px_rgba(255,42,66,0.05)]">
+                <span className="text-cyber-textMuted font-medium flex items-center gap-2"><Smartphone className="w-4 h-4"/> Wi-Fi Name (SSID)</span>
+                <span className="font-bold text-white">{ssid || 'Unknown Network'}</span>
               </div>
-              <div className="bg-slate-50 p-4 rounded-xl flex justify-between items-center border border-slate-100">
-                <span className="text-slate-500 font-medium flex items-center gap-2"><AppWindow className="w-4 h-4"/> Your IP Address</span>
-                <span className="font-bold text-slate-800">{ipAddress || 'Unknown'}</span>
+              <div className="bg-cyber-surface rounded-xl p-4 flex items-center justify-between border border-cyber-neon/20 shadow-[0_0_10px_rgba(255,42,66,0.05)]">
+                <div className="flex items-center gap-3 text-cyber-textMuted">
+                  <AppWindow size={20} />
+                  <span>Your IP Address</span>
+                </div>
+                <span className="font-bold text-white font-mono">{ipAddress || 'Unknown'}</span>
               </div>
-              <div className="bg-slate-50 p-4 rounded-xl flex flex-col border border-slate-100">
+              <div className="bg-cyber-surface rounded-xl p-4 flex flex-col border border-cyber-neon/20 shadow-[0_0_10px_rgba(255,42,66,0.05)]">
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-500 font-medium flex items-center gap-2"><Search className="w-4 h-4"/> Connected Devices</span>
-                  <span className="font-bold text-emerald-600 text-lg">{deviceCount !== undefined ? deviceCount : 'Unknown'}</span>
+                  <div className="flex items-center gap-3 text-cyber-textMuted">
+                    <Search size={20} />
+                    <span>Connected Devices</span>
+                  </div>
+                  <span className="font-bold text-cyber-neon font-mono text-lg">{deviceCount !== undefined ? deviceCount : 'Unknown'}</span>
                 </div>
                 {connectedDevices && connectedDevices.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-slate-200 flex flex-wrap gap-2">
+                  <div className="mt-3 pt-3 border-t border-cyber-neon/20 flex flex-wrap gap-2">
                     {connectedDevices.map((ip, idx) => (
-                      <span key={idx} className="px-3 py-1 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 font-mono shadow-sm">
+                      <span key={idx} className="text-xs bg-cyber-bg text-cyber-textMuted border border-cyber-neon/10 px-2 py-1 rounded-md font-mono">
                         {ip}
                       </span>
                     ))}

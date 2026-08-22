@@ -370,7 +370,7 @@ export class SecurityScanner {
     }
   }
 
-  private async getInstalledAppsAndPermissions(sessionId: string, onLog?: (msg: string) => void): Promise<{
+  public async getInstalledAppsAndPermissions(sessionId: string, onLog?: (msg: string) => void): Promise<{
     status: 'success' | 'error';
     apps: InstalledAppInfo[];
     permissions: { [packageName: string]: PermissionFinding[] };

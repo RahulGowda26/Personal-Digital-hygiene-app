@@ -52,21 +52,36 @@ async function digestSha1(message: string): Promise<string> {
 export class SupabaseThreatIntelligenceProvider implements ThreatIntelligenceProvider {
   async checkAccountExposure(email: string): Promise<BreachCheckResult> {
     try {
-      const { data, error } = await supabase.functions.invoke('check-breach', {
-        body: { email }
-      });
-
-      if (error) {
-        throw new Error(error.message || 'Error calling threat intelligence service');
+      const response = await fetch(`https://api.xposedornot.com/v1/check-email/${encodeURIComponent(email)}`);
+      
+      let breachesList: string[] = [];
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.breaches && data.breaches.length > 0) {
+           breachesList = data.breaches[0];
+        }
+      } else if (response.status === 404) {
+        // 404 means no breaches found
+        breachesList = [];
+      } else {
+        throw new Error('Failed to fetch from Threat Intelligence service');
       }
 
-      const breaches: BreachExposure[] = data.breaches || [];
+      const breaches: BreachExposure[] = breachesList.map(name => ({
+        id: name,
+        name: name,
+        title: name,
+        domain: null,
+        breachDate: 'Unknown',
+        dataClasses: ['Email', 'Password'], // Assumed commonly exposed
+        verified: true
+      }));
 
       return {
         status: breaches.length > 0 ? 'breach_found' : 'no_breach',
         checkedAt: new Date().toISOString(),
-        provider: 'Have I Been Pwned',
-        accountIdentifierHash: data.emailHash || await digestMessage(email), // Fallback if missing
+        provider: 'XposedOrNot',
+        accountIdentifierHash: await digestMessage(email),
         breachCount: breaches.length,
         breaches,
         confidence: 'high',
@@ -77,7 +92,7 @@ export class SupabaseThreatIntelligenceProvider implements ThreatIntelligencePro
       return {
         status: 'error',
         checkedAt: new Date().toISOString(),
-        provider: 'Have I Been Pwned',
+        provider: 'XposedOrNot',
         accountIdentifierHash: await digestMessage(email),
         breachCount: 0,
         breaches: [],

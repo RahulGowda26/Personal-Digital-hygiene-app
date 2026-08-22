@@ -293,10 +293,10 @@ export function SecurityHabitsScreen({
             </div>
           </div>
           <h1 className="text-3xl font-outline text-outline-glow tracking-widest uppercase mb-4">
-            Security Scan
+            Security Habits
           </h1>
           <p className="text-sm font-sans text-cyber-textMuted max-w-sm mb-8">
-            Initiating deep scan of device configuration, network posture, and threat exposure metrics.
+            Evaluate your personal security practices and external account exposure.
           </p>
 
           {error && (
@@ -307,7 +307,7 @@ export function SecurityHabitsScreen({
             className="w-full sm:w-auto px-12 py-4 bg-cyber-neon/10 border border-cyber-neon text-cyber-neon font-sans font-bold uppercase tracking-widest hover:bg-cyber-neon hover:text-white transition-all shadow-[0_0_20px_rgba(255,42,66,0.2)] rounded-lg"
             onClick={startCheckup}
           >
-            Initialize Scan
+            Begin Questionnaire
           </button>
         </div>
       </div>

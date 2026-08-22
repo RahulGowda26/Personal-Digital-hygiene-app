@@ -737,6 +737,9 @@ export function generateScoreFromFindings(findings: SecurityFinding[] | import('
     let confidence: Confidence = 'high';
     const categoryFindings = findings.filter(f => f.category === category);
     
+    // Only calculate score for device_security and app_security as requested
+    const isDeviceScanCategory = category === 'device_security' || category === 'app_security';
+    
     if (categoryFindings.length > 0) {
       let maxSeverity: Severity | null = null;
       for (const f of categoryFindings) {
@@ -749,8 +752,10 @@ export function generateScoreFromFindings(findings: SecurityFinding[] | import('
       else if (maxSeverity === 'high') score = 50;
       else if (maxSeverity === 'medium') score = 80;
       else if (maxSeverity === 'low') score = 90;
-    } else if (category === 'account_security' || category === 'password_hygiene') {
-      // Unscannable purely via device signals, so mark as insufficient data
+    } 
+
+    // If it's not a device scan category, we mark it as insufficient data so it doesn't affect the weighted average
+    if (!isDeviceScanCategory) {
       return {
         category,
         score: 0,
